@@ -11,13 +11,58 @@
   LOADING  →  #loading
 ================================================================ -->
     <div id="loading-screen">
-        <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/backgrounds/loading.png" alt="Loading image" id="loading-screen-image">
+        <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/backgrounds/loading.png" alt="" id="loading-screen-image">
         <img src="assets/logo/logo.png" alt="Logo" id="loading-screen-logo">
         <div id="loading-screen-bar"></div>
         <h1 id="loading-screen-titel">Loading...</h1>
         <h1 id="loading-screen-percentage">0%</h1>
         <h3 id="loading-screen-detail">Starting application</h3>
         <p id="loading-screen-disclaimer">This is a test game</p>
+    </div>
+<!-- ================================================================
+  WELCOME  →  #welcome
+================================================================ -->
+    <div id="welcome-screen">
+        <div id="welcome-screen-log-in">
+            <h1 id="welcome-screen-titel">Welcome to Apex-Arena</h1>
+            <h4 id="welcome-screen-subtitle">Choose how to log in</h4>
+            <p id="welcome-screen-subsubtitle">This way your data can be saved and accessed across devices</p>
+            <div id="welcome-screen-login-options">
+                <button class="welcome-screen-login-option" id="welcome-screen-login-option-google">
+                    <img src="assets/logos/Google/logo.png" alt="Google logo" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-google">
+                    <p id="welcome-screen-login-option-text-google">Continue with Google</p>
+                </button>
+                <button class="welcome-screen-login-option" id="welcome-screen-login-option-microsoft">
+                    <img src="assets/logos/Microsoft/logo.png" alt="Microsoft logo" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-microsoft">
+                    <p id="welcome-screen-login-option-text-microsoft">Continue with Microsoft</p>
+                </button>
+                <button class="welcome-screen-login-option" id="welcome-screen-login-option-apple">
+                    <img src="assets/logos/Apple/logo.png" alt="Apple logo" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-apple">
+                    <p id="welcome-screen-login-option-text-apple">Continue with Apple</p>
+                </button>
+                <button class="welcome-screen-login-option" id="welcome-screen-login-option-email">
+                    <img src="assets/logos/E-mail/logo.png" alt="E-mail" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-email">
+                    <p id="welcome-screen-login-option-text-email">Continue with E-mail</p>
+                </button>
+            </div>
+            <button id="welcome-screen-guest-button">
+                <img src="assets/logos/Guest/logo.png" alt="Guest logo" id="welcome-screen-guest-button-icon">
+                <p id="welcome-screen-guest-button-text">Or continue as Guest</p>
+                <p id="welcome-screen-guest-button-disclaimer">Your data will not be saved and you play offline</p>
+            </button>
+            <div id="welcome-screen-cookies">
+                <p id="welcome-screen-cookies-text">We use cookies to improve your experience. By clicking "Accept Cookies", you agree to our use of cookies.</p>
+                <p id="welcome-screen-cookies-link">Learn more about our <a href="#cookie-policy" id="welcome-screen-cookies-link-text">Cookie Policy</a>.</p>
+                <button id="welcome-screen-cookies-button">Accept Cookies</button>
+                <button id="welcome-screen-cookies-decline-button">Decline Cookies</button>
+            </div>
+        </div>
+        <div id="welcome-screen-welcome">
+            <p id="welcome-screen-disclaimer">By continuing, you agree to our <a href="#terms-of-service" id="welcome-screen-terms-link">Terms of Service</a> and <a href="#privacy-policy" id="welcome-screen-privacy-link">Privacy Policy</a>.</p>
+            <input type="checkbox" id="welcome-screen-disclaimer-accept">
+            <label for="welcome-screen-disclaimer-accept">I agree to the Terms of Service and Privacy Policy</label>
+        </div>
+        
     </div>
     <script src="js/script.js"></script>
 </body>
