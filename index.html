@@ -7,10 +7,18 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <h1>Welkom bij de Game Test!</h1>
-    <p>Klik op de knop hieronder om te beginnen.</p>
-    <button id="startButton">Start Game</button>
-
+<!-- ================================================================
+  LOADING  →  #loading
+================================================================ -->
+    <div id="loading-screen">
+        <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/backgrounds/loading.png" alt="Loading image" id="loading-screen-image">
+        <img src="assets/logo/logo.png" alt="Logo" id="loading-screen-logo">
+        <div id="loading-screen-bar"></div>
+        <h1 id="loading-screen-titel">Loading...</h1>
+        <h1 id="loading-screen-percentage">0%</h1>
+        <h3 id="loading-screen-detail">Starting application</h3>
+        <p id="loading-screen-disclaimer">This is a test game</p>
+    </div>
     <script src="js/script.js"></script>
 </body>
 </html>

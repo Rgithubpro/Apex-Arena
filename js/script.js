@@ -1,5 +1,2 @@
-const button = document.getElementById('startButton');
-
-button.addEventListener('click', () => {
-    alert('De game is gestart!');
-});
+const loading_screen = document.getElementById('loading-screen');
+loading_screen.style.display = "none";
