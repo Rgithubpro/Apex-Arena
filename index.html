@@ -55,18 +55,44 @@
         <!--E-mail log-in / sign up-->
         <div id="welcome-screen-email">
             <div id="welcome-screen-email-login">
-
+                <h2 id="welcome-screen-email-login-title">Welcome back!</h2>
+                <h4 id="welcome-screen-email-login-subtitle">Log in with your E-mail address and password</h4>
+                <form id="welcome-screen-email-login-form">
+                    <input type="email" id="welcome-screen-email-login-email" placeholder="E-mail address" required>
+                    <input type="password" id="welcome-screen-email-login-password" placeholder="Password" required>
+                    <button type="button" id="welcome-screen-email-login-show-password"><img src="assets/images/icons/show-password.png" alt="Show password" id="welcome-screen-email-login-show-password-icon"></button>
+                    <button type="submit" id="welcome-screen-email-login-button">Log In</button>
+                    <a href="#forgot-password" id="welcome-screen-email-login-forgot">Forgot password?</a> <!-- Link to forgot password page DON'T FORGET TO LINK!-->
+                </form>
             </div>
             <div id="welcome-screen-email-signup">
-
+                <h2 id="welcome-screen-email-signup-title">Join us!</h2>
+                <h4 id="welcome-screen-email-signup-subtitle">Create an account with an E-mail address and password</h4>
+                <form id="welcome-screen-email-signup-form">
+                    <input type="text" id="welcome-screen-email-signup-username" placeholder="Username" required>
+                    <input type="email" id="welcome-screen-email-signup-email" placeholder="E-mail address" required>
+                    <input type="password" id="welcome-screen-email-signup-password" placeholder="Password" required>
+                    <button type="button" id="welcome-screen-email-signup-show-password"><img src="assets/images/icons/show-password.png" alt="Show password" id="welcome-screen-email-login-show-password-icon"></button>
+                    <input type="password" id="welcome-screen-email-signup-confirm-password" placeholder="Confirm Password" required>
+                    <button type="button" id="welcome-screen-email-signup-show-password-confirm"><img src="assets/images/icons/show-password.png" alt="Show password" id="welcome-screen-email-signup-show-password-icon"></button>
+                    <button type="submit" id="welcome-screen-email-signup-button">Sign Up</button>
+                </form>
             </div>
            
         </div>
         <!-- Disclaimer-->
-        <div id="welcome-screen-welcome">
-            <p id="welcome-screen-disclaimer">By continuing, you agree to our <a href="#terms-of-service" id="welcome-screen-terms-link">Terms of Service</a> and <a href="#privacy-policy" id="welcome-screen-privacy-link">Privacy Policy</a>.</p>
+        <div id="welcome-screen-disclaimer">
+            <h1 id="welcome-screen-disclaimer-title">Welcome to Apex-Arena!</h1>
+            <h2 id="welcome-screen-disclaimer-subtitle">We hope you have a great time!</h2>
+            <p id="welcome-screen-disclaimer-txt">But first you have to agree to our <a href="#terms-of-service" id="welcome-screen-terms-link">Terms of Service</a> and <a href="#privacy-policy" id="welcome-screen-privacy-link">Privacy Policy</a>.</p>
             <input type="checkbox" id="welcome-screen-disclaimer-accept">
             <label for="welcome-screen-disclaimer-accept">I agree to the Terms of Service and Privacy Policy</label>
+            <button id="welcome-screen-disclaimer-button">Start Playing</button>
+        </div>
+        <!--Welcome back player-->
+        <div id="welcome-screen-welcome-back">
+            <h1 id="welcome-screen-welcome-back-title">Welcome back, {username}!</h1>
+            <button id="welcome-screen-welcome-back-button">Continue to Home Screen</button>
         </div>
         <!-- Cookies-->
         <div id="welcome-screen-cookies">
