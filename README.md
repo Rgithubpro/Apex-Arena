@@ -5,7 +5,7 @@
 
 [![Status: In Development](https://img.shields.io/badge/Status-In%20Development-yellow.svg)](#)
 [![Tech: HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](#)
-[![Tech: SASS/CSS](https://img.shields.io/badge/SASS-CC6699?logo=sass&logoColor=white)](#)
+[![Tech: CSS](https://img.shields.io/badge/CSS-CC6699?logo=css&logoColor=white)](#)
 [![Tech: JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)](#)
 
 ## 📖 About the Project
@@ -29,15 +29,13 @@
 *   **Figma:** Interface design, menu layouts, and HUD planning.
 
 ### Networking
-*   *[Insert backend/networking tech here, e.g., WebSockets, Node.js, Socket.io]*
+*   *This works with Supabase as database and a seperate server for matchmaking etc.*
 
 ## 📸 Screenshots
 
 | Main Menu | Combat Gameplay |
 | :---: | :---: |
-| ![Menu Placeholder](https://via.placeholder.com/400x250?text=Figma+UI+Menu) | ![Gameplay Placeholder](https://via.placeholder.com/400x250?text=Gameplay+Action) |
-
-*(Replace the placeholders above with actual screenshots of your game)*
+| Picture will come later | Picture will come later |
 
 ## 🚀 Getting Started
 
@@ -51,15 +49,12 @@ You will need a local web server to run the game properly (due to standard CORS 
 ### Installation
 
 1. **Clone the repository:**
-   git clone https://github.com/YourUsername/apex-arena.git
+   git clone https://github.com/rgithubpro/Apex-Arena.git
 
 2. **Navigate to the directory:**
    cd apex-arena
 
-3. **Compile SASS (if applicable):**
-   npm run watch-css
-
-4. **Launch the local server:**
+3. **Launch the local server:**
    Open the folder in your code editor and start your live server. The game should now be running at `http://localhost:5500` (or your configured port).
 
 ## 🗺️ Roadmap
@@ -77,7 +72,7 @@ This project is currently in active solo development, but feedback and bug repor
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Read **LICENCE** for the licence
 
 ---
-**Designed & Developed by [Your Name/Handle]**
+**Designed & Developed by Ralph**
