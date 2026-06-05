@@ -1,14 +1,3 @@
-// Hide parts i dont want to see currently
-const loading_screen = document.getElementById('loading-screen');
-loading_screen.style.display = "none";
-const welcome_screen = document.getElementById('welcome-screen');
-welcome_screen.style.display = "visible";
-
-
-
-
-
-
 // Random pieces js for now.
 const microsoft = document.getElementById('welcome-screen-login-option-microsoft');
 microsoft.addEventListener('click', () => {
@@ -24,3 +13,19 @@ show_password.addEventListener('click', () => {
     } else {
         show_password_icon.src = 'assets/images/icons/show-password.png';
     }});
+
+
+// temporary stuff to from loading to current dev page, will be removed later
+function transitionFromLoading() {
+    console.log('Transitioning from loading to home');
+    if (window.location.hash.substring(1) === 'loading') {
+        console.log('loading...')
+        setTimeout(() => {
+            window.location.hash = 'home';
+            console.log('Transitioning from loading to home');
+        }, 1000);
+    }
+}
+
+window.addEventListener('hashchange', transitionFromLoading);
+window.addEventListener('load', transitionFromLoading);
