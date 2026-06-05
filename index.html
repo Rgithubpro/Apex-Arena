@@ -106,6 +106,7 @@
   HOME  →  #home
 ================================================================ -->
     <div id="home-screen">
+        <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/backgrounds/background.png" alt="Home screen background" id="home-screen-background">
         <div id="home-screen-top">
             <button id="home-screen-profile">
                 <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/profile-pictures/abstract-002.png" alt="Profile picture" id="home-screen-profile-picture">
@@ -122,18 +123,90 @@
                 <img src="assets/images/home-screen/dynamic/rewards/coins.png" alt="Next reward = {reward}" id="home-screen-trophieroad-next-reward">
                 <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/rank-images/Rank5.png" alt="Rank: {rank}" id="home-screen-trophieroad-rank">
             </button>
-        </div>
-        <div id="home-screen-bottom">
-            
+            <div id="home-screen-currencies">
+                <button id="home-screen-currencies-gems">
+                    <p id="home-screen-currencies-gems-count">134</p>
+                    <img src="assets/images/home-screen/icons/gems.png" alt="Gems" id="home-screen-currencies-gems-icon">
+                </button>
+                <button id="home-screen-currencies-coins">
+                    <p id="home-screen-currencies-coins-count">5291</p>
+                    <img src="assets/images/home-screen/icons/coins.png" alt="Coins" id="home-screen-currencies-coins-icon">
+                </button>
+                <button id="home-screen-currencies-powerpoints">
+                    <p id="home-screen-currencies-powerpoints-count">9821</p>
+                    <img src="assets/images/home-screen/icons/powerpoints.png" alt="Powerpoints" id="home-screen-currencies-powerpoints-icon">
+                </button>
+                <button id="home-screen-currencies-crystals">
+                    <p id="home-screen-currencies-crystals-count">29512</p>
+                    <img src="assets/images/home-screen/icons/crystal.png" alt="Crystals" id="home-screen-currencies-crystals-icon">
+                </button>
+            </div>
+            <button id="home-screen-settings">
+                <img src="assets/images/home-screen/icons/settings.png" alt="" id="home-screen-settings-icon">
+            </button>
         </div>
         <div id="home-screen-left">
-
+            <button id="home-screen-shop">
+                <img src="assets/images/home-screen/icons/shop.png" alt="" id="home-screen-shop-icon">
+                <p id="home-screen-shop-text">Shop</p>
+                <div id="home-screen-shop-flag">
+                    <p id="home-screen-shop-flag-text">Free</p>
+                </div>
+            </button>
+            <button id="home-screen-battlers">
+                <img src="assets/images/home-screen/icons/battlers.png" alt="" id="home-screen-battlers-icon">
+                <p id="home-screen-battlers-text">Battlers</p>
+                <div id="home-screen-battlers-notification">
+                    <p id="home-screen-battlers-notification-text">20</p>
+                </div>
+            </button>
+            <button id="home-screen-unlock-brawler">
+                <img src="assets/images/home-screen/icons/placeholder.png" alt="" id="home-screen-unlock-brawler-icon">
+                <div id="home-screen-unlock-brawler-bar">
+                    <div id="home-screen-unlock-brawler-bar-fill"></div>
+                    <p id="home-screen-unlock-brawler-text">1810/3800</p>
+                </div>
+            </button>
         </div>
         <div id="home-screen-right">
 
         </div>
         <div id="home-screen-center">
 
+        </div>
+        <div id="home-screen-bottom">
+            <button id="home-screen-battlepass">
+                <img src="assets/images/home-screen/dynamic/battlepass/normal.png" alt="" id="home-screen-battlepass-icon">
+                <div id="home-screen-battlepass-progressbar">
+                    <div id="home-screen-battlepass-progressbar-fill"></div>
+                    <p id="home-screen-battlepass-progressbar-text">421/950</p>
+                </div>
+                <img src="assets/images/home-screen/icons/battler-xp.png" alt="" id="home-screen-battlepass-progressbar-icon">
+                <img src="assets/images/home-screen/dynamic/rewards/stardrop.png" alt="Next reward = {reward}" id="home-screen-battlepass-next-reward">
+            </button>
+            <button id="home-screen-quests">
+                <img src="assets/images/home-screen/icons/quests.png" alt="" id="home-screen-quests-icon">
+                <p id="home-screen-quests-text">Quests</p>
+                <div id="home-screen-quests-flag">
+                    <p id="home-screen-quests-flag-text">New</p>
+                </div>
+            </button>
+            <button id="home-screen-streak">
+                <img src="assets/images/home-screen/icons/flame1.png" alt="" id="home-screen-streak-icon">
+                <p id="home-screen-streak-text">5</p>
+            </button>
+            <button id="home-screen-event">
+                <p id="home-screen-event-new-event-in">New event in: 2h 30m</p>
+                <img src="assets/images/home-screen/icons/info.png" alt="" id="home-screen-event-info">
+                <div id="home-screen-event-box">
+                    <h6 id="home-screen-event-box-gamemode">Football</h6>
+                    <p id="home-screen-event-box-map-name">Beach</p>
+                    <img src="assets/images/maps/football/icon.png" alt="" id="home-screen-event-box-mode-image">
+                    <div id="home-screen-event-new">
+                        <p id="home-screen-event-new-text">NEW EVENTS!</p>
+                    </div>
+                </div>
+            </button>
         </div>
     </div>
     <script src="js/router.js"></script>

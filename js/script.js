@@ -23,7 +23,7 @@ function transitionFromLoading() {
         setTimeout(() => {
             window.location.hash = 'home';
             console.log('Transitioning from loading to home');
-        }, 1000);
+        }, 500);
     }
 }
 
