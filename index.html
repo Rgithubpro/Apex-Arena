@@ -107,6 +107,7 @@
 ================================================================ -->
     <div id="home-screen">
         <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/backgrounds/background.png" alt="Home screen background" id="home-screen-background">
+        <!-- Top -->
         <div id="home-screen-top">
             <button id="home-screen-profile">
                 <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/profile-pictures/abstract-002.png" alt="Profile picture" id="home-screen-profile-picture">
@@ -121,7 +122,10 @@
                     <div id="home-screen-trophieroad-progressbar-fill"></div>
                 </div>
                 <img src="assets/images/home-screen/dynamic/rewards/coins.png" alt="Next reward = {reward}" id="home-screen-trophieroad-next-reward">
-                <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/rank-images/Rank5.png" alt="Rank: {rank}" id="home-screen-trophieroad-rank">
+                <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/rank-images/trophieroad/Rank5.png" alt="Rank: {rank}" id="home-screen-trophieroad-rank">
+                <div id="home-screen-trophieroad-rank-substage">
+                    <p id="home-screen-trophieroad-rank-substage-text">III</p>
+                </div>
             </button>
             <div id="home-screen-currencies">
                 <button id="home-screen-currencies-gems">
@@ -145,6 +149,7 @@
                 <img src="assets/images/home-screen/icons/settings.png" alt="" id="home-screen-settings-icon">
             </button>
         </div>
+        <!-- Left side -->
         <div id="home-screen-left">
             <button id="home-screen-shop">
                 <img src="assets/images/home-screen/icons/shop.png" alt="" id="home-screen-shop-icon">
@@ -168,12 +173,63 @@
                 </div>
             </button>
         </div>
+        <!-- Right side -->
         <div id="home-screen-right">
-
+            <button id="home-screen-news">
+                <img src="assets/images/home-screen/icons/news.png" alt="" id="home-screen-news-icon">
+                <p id="home-screen-news-text">News</p>
+                <div id="home-screen-news-flag">
+                    <p id="home-screen-news-flag-text">New</p>
+                </div>
+            </button>
+            <button id="home-screen-friends">
+                <img src="assets/images/home-screen/icons/friends.png" alt="" id="home-screen-friends-icon">
+                <p id="home-screen-friends-text">Friends</p>
+                <div id="home-screen-friends-notification">
+                    <p id="home-screen-friends-notification-text">5</p>
+                </div>
+            </button>
+            <button id="home-screen-club">
+                <img src="assets/images/home-screen/dynamic/clubs/club-blue.png" alt="" id="home-screen-club-icon">
+                <p id="home-screen-club-text">Clubs</p>
+                <div id="home-screen-club-notification">
+                    <p id="home-screen-club-notification-text">2</p>
+                </div>
+            </button>
+            <button id="home-screen-team/chat">
+                <img src="assets/images/home-screen/icons/teamup.png" alt="" id="home-screen-team/chat-icon"> <!-- can change to chat icon-->
+                <p id="home-screen-team/chat-text">Team up!</p> <!-- can change to Chat-->
+            </button>
         </div>
+        <!-- Center -->
         <div id="home-screen-center">
-
+            <div id="home-screen-battler-trophies"> <!-- no button cause you can't click on it -->
+                <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/rank-images/Battlers/Rank4.png" alt="" id="home-screen-battler-trophies-rank-icon">
+                <p id="home-screen-battler-trophies-rank-text">II</p>
+                <div id="home-screen-battler-trophies-progressbar">
+                    <div id="home-screen-battler-trophies-progressbar-fill"></div>
+                    <p id="home-screen-battler-trophies-progressbar-text">920</p>
+                    <img src="assets/images/home-screen/icons/trophy.png" alt="" id="home-screen-battler-trophies-progressbar-trophie">
+                </div>
+            </div>
+            <button id="home-screen-battler-power-level">
+                <img src="assets/images/home-screen/icons/power-flame.png" alt="" id="home-screen-battler-power-level-ultra-icon">
+                <p id="home-screen-battler-power-level-text">9</p>
+            </button>
+            <button id="home-screen-battler-upgrades">
+                <img src="assets/images/home-screen/icons/placeholder.png" alt="" id="home-screen-battler-upgrades-gear1">
+                <img src="assets/images/home-screen/icons/placeholder.png" alt="" id="home-screen-battler-upgrades-gear2">
+                <img src="assets/images/home-screen/icons/placeholder.png" alt="" id="home-screen-battler-upgrades-gadget">
+                <img src="assets/images/home-screen/icons/placeholder.png" alt="" id="home-screen-battler-upgrades-starpower">
+            </button>
+            <button id="home-screen-battler-skins">
+                <img src="assets/images/home-screen/icons/hanger.png" alt="" id="home-screen-battler-skins-icon">
+            </button>
+            <div id="home-screen-battler-render">
+                <canvas id="home-screen-battler-render-canvas"></canvas>
+            </div>
         </div>
+        <!-- Bottom-->
         <div id="home-screen-bottom">
             <button id="home-screen-battlepass">
                 <img src="assets/images/home-screen/dynamic/battlepass/normal.png" alt="" id="home-screen-battlepass-icon">
@@ -205,6 +261,29 @@
                     <div id="home-screen-event-new">
                         <p id="home-screen-event-new-text">NEW EVENTS!</p>
                     </div>
+                </div>
+            </button>
+            <button id="home-screen-play">
+                <div id="home-screen-play-rewards-bar">
+                    <div id="home-screen-play-rewards-bar-fill"></div>
+                    <!-- for now 6 seperate divs, try to make it dynamic -->
+                    <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment1"></div>
+                    <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment2"></div>
+                    <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment3"></div>
+                    <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment4"></div>
+                    <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment5"></div>
+                    <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment6"></div>
+                    <p id="home-screen-play-rewards-bar-next-text">Next rewards 5h 23m</p>
+                    <img src="assets/images/home-screen/icons/clock.png" id="home-screen-play-rewards-bar-next-icon">
+                </div>
+                <img src="assets/images/home-screen/dynamic/rewards/stardrop.png" id="home-screen-play-reward1">
+                <img src="assets/images/home-screen/dynamic/rewards/stardrop.png" id="home-screen-play-reward2">
+                <img src="assets/images/home-screen/dynamic/rewards/stardrop.png" id="home-screen-play-reward3">
+                <img src="assets/images/home-screen/dynamic/rewards/stardrop.png" id="home-screen-play-reward4">
+                <img src="assets/images/home-screen/dynamic/rewards/stardrop.png" id="home-screen-play-reward5">
+                <img src="assets/images/home-screen/dynamic/rewards/stardrop.png" id="home-screen-play-reward6">
+                <div id="home-screen-play-button">
+                    <h2 id="home-screen-play-button-text">Play</h2>
                 </div>
             </button>
         </div>
