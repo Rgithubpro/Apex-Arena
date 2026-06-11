@@ -1,0 +1,126 @@
+/* FONTS */
+@font-face {
+  font-family: 'lilita-one';
+  src: url('../assets/fonts/LilitaOne-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'lilita-one-bold';
+  src: url('../assets/fonts/LilitaOne-Regular.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+/* KEYFRAMES */
+@keyframes pulse-energy {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}
+/* LOADING SCREEN */
+#loading-screen {
+    position: fixed;
+    background: #0d111f;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+}
+#loading-screen-image {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0vh;
+    left: 0vw;
+    z-index: 1;
+}
+#loading-screen-logo {
+    position: fixed;
+    width: 15vw;
+    height: auto;
+    top: 2vh;
+    left: 2vw;
+    z-index: 3;
+}
+#loading-screen-bar {
+    position: fixed;
+    width: 75vw;
+    height: 5vh;
+    bottom: 10vh;
+    left: 12.5vw;
+    background: #055c6c;
+    opacity: 0.8;
+    border-radius: 5vw;
+    border: 0.3vw solid #0accee;
+    z-index: 3;
+
+    box-shadow: 
+        inset 0 0 1vh #0accee,   
+        0 0 1.5vh rgba(10, 204, 238, 0.5);
+        
+    overflow: hidden;
+}
+#loading-screen-bar-fill {
+    height: 100%;
+    width: 0%; 
+    background: linear-gradient(to right, #0accee, #01fbff, #0accee);
+    background-size: 75vw 100%;
+    background-attachment: fixed; 
+    border-radius: inherit; 
+    box-shadow: inset 0 0 1vh rgba(255, 255, 255, 0.3);
+    transition: width 0.3s ease-in-out;
+    animation: pulse-energy 1.5s infinite ease-in-out;
+}
+#loading-screen-title {
+    position: fixed;
+    font-family: 'lilita-one-bold';
+    font-size: 5vw;
+    color: #ffffff;
+    opacity: 0.9;
+    -webkit-text-stroke: 0.2vw #000000;
+    bottom: 13vh;
+    left: 42vw;
+    z-index: 3;
+}
+#loading-screen-disclaimer-fade {
+    position: fixed;
+    width: 100vw;
+    height: 10vh;
+    bottom: 0vh;
+    left: 0vw;
+    background: linear-gradient(0, #055c6c 0%, #055d6ca4 80%, #055c6c00 100%);
+    z-index: 2;
+}
+#loading-screen-disclaimer {
+    position: fixed;
+    font-family: 'lilita-one';
+    font-size: 1vw;
+    color: #09cccf;
+    bottom: 0vh;
+    left: 1vw;
+    opacity: 0.8;
+    z-index: 3;
+}
+#loading-screen-detail {
+    position: fixed;
+    font-family: 'lilita-one';
+    font-size: 1.8vw;
+    color: #ffffff;
+    opacity: 0.9;
+    -webkit-text-stroke: 0.07vw #000000;
+    bottom: 13vh;
+    left: 50vw;
+    transform: translateX(-50%);
+    z-index: 3;
+}
+#loading-screen-percentage {
+    position: fixed;
+    font-family: 'lilita-one';
+    font-size: 3.3vw;
+    color: #ffffff;
+    opacity: 0.9;
+    -webkit-text-stroke: 0.1vw #000000;
+    bottom: 5.7vh;
+    left: 50vw;
+    transform: translateX(-50%);
+    z-index: 4;
+}

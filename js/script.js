@@ -16,16 +16,18 @@ show_password.addEventListener('click', () => {
 
 
 // temporary stuff to from loading to current dev page, will be removed later
-function transitionFromLoading() {
-    console.log('Transitioning from loading to home');
-    if (window.location.hash.substring(1) === 'loading') {
-        console.log('loading...')
-        setTimeout(() => {
-            window.location.hash = 'home';
-            console.log('Transitioning from loading to home');
-        }, 500);
+/*    function transitionFromLoading() {
+        console.log('Transitioning from loading to home');
+        if (window.location.hash.substring(1) === 'loading') {
+            console.log('loading...')
+            setTimeout(() => {
+                window.location.hash = 'home';
+                console.log('Transitioning from loading to home');
+            }, 500);
+        }
     }
-}
 
-window.addEventListener('hashchange', transitionFromLoading);
-window.addEventListener('load', transitionFromLoading);
+    window.addEventListener('hashchange', transitionFromLoading);
+    window.addEventListener('load', transitionFromLoading);
+    */
+   
