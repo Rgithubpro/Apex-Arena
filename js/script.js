@@ -14,20 +14,28 @@ show_password.addEventListener('click', () => {
         show_password_icon.src = 'assets/images/icons/show-password.png';
     }});
 
+/*
+const notif = document.getElementById('loading-screen-notification');
+const img   = document.getElementById('loading-screen-notification-img');
 
-// temporary stuff to from loading to current dev page, will be removed later
-/*    function transitionFromLoading() {
-        console.log('Transitioning from loading to home');
-        if (window.location.hash.substring(1) === 'loading') {
-            console.log('loading...')
-            setTimeout(() => {
-                window.location.hash = 'home';
-                console.log('Transitioning from loading to home');
-            }, 500);
-        }
+function showNotification({ title, desc, time, image }) {
+    document.getElementById('loading-screen-notification-title').textContent = title;
+    document.getElementById('loading-screen-notification-description').textContent = desc;
+    document.getElementById('loading-screen-notification-time').textContent = time;
+    if (image) {
+        img.src = image;
+        img.style.display = 'block';
+    } else {
+        img.removeAttribute('src');
+        img.style.display = 'none';
     }
+    notif.hidden = false;
+    document.body.classList.add('has-notification');
+}
 
-    window.addEventListener('hashchange', transitionFromLoading);
-    window.addEventListener('load', transitionFromLoading);
-    */
+function hideNotification() {
+    notif.hidden = true;
+    document.body.classList.remove('has-notification');
+}
+*/
    

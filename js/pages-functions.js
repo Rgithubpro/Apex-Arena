@@ -10,16 +10,38 @@ async function edit_loading_percentage(target) {
   let current_percentage = parseFloat(loading_percentage.textContent)
   if (current_percentage >= target) break;
   loading_percentage.textContent = current_percentage + 1 +'%';
-  await sleep(10)
+  await sleep(8)
   }
 }
 export async function load_screen() {
-  const loading_screen = document.getElementById('loading-screen')
+  const loading_screen = document.getElementById('loading-screen');
+  const { loading_notif } = await import('/js/data/database/extra.js');
+  const [notifEnabled, notifTitle, notifDesc, notifTime, notifImage] = await loading_notif();
+  const notif = document.getElementById('loading-screen-notification')
+  const img   = document.getElementById('loading-screen-notification-img')
+  notif.hidden = true
+  if (notifEnabled === true) {
+    document.getElementById('loading-screen-notification-title').textContent = notifTitle;
+    document.getElementById('loading-screen-notification-description').textContent = notifDesc;
+    document.getElementById('loading-screen-notification-time').textContent = notifTime;
+    if (notifImage) {
+        img.src = notifImage;
+        img.style.display = 'block';
+    } else {
+        img.removeAttribute('src');
+        img.style.display = 'none';
+    }
+    notif.hidden = false;
+    document.body.classList.add('has-notification');
+    return
+  } else {
+    notif.hidden = true;
+    document.body.classList.remove('has-notification');
+  }
   const title = document.getElementById('loading-screen-title');
   const states = ['', '.', '..', '...', '..', '.'];
   let idx = 0;
 
-  // voorkom dubbele intervals
   if (load_screen._running) return;
   load_screen._running = true;
 
