@@ -1,3 +1,17 @@
+/* ROOT */
+:root {
+    /* Common type scale — clamp(min, vmin-preferred, max).
+    vmin scales with whichever dimension is smaller, so text never
+    gets too big on 4K or too small on a narrow phone. */
+    --ls-font-detail:    clamp(0.9rem, 1.6vmin, 1.6rem);
+    --ls-font-title:     clamp(2.2rem, 5.5vmin, 5rem);
+    --ls-font-percent:   clamp(1.6rem, 3vmin, 3rem);
+    --ls-font-disclaim:  clamp(0.7rem, 1.1vmin, 1rem);
+    --ls-bar-height:     clamp(2.2rem, 4.5vmin, 4.5rem);
+    --ls-bar-width:      min(75vw, 900px);
+    --ls-logo-size:      clamp(80px, 12vmin, 220px);
+    --ls-bottom-pad:     clamp(4vh, 8vh, 12vh);
+}
 /* FONTS */
 @font-face {
   font-family: 'lilita-one';
@@ -20,107 +34,127 @@
 /* LOADING SCREEN */
 #loading-screen {
     position: fixed;
+    inset: 0;
     background: #0d111f;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0;
+    z-index: 100;
+    overflow: hidden;
 }
 #loading-screen-image {
-    position: fixed;
-    width: 100vw;
-    height: 100vh;
-    top: 0vh;
-    left: 0vw;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;       /* fills, may crop, no stretching */
+    object-position: center;
     z-index: 1;
 }
 #loading-screen-logo {
-    position: fixed;
-    width: 15vw;
-    height: auto;
+    position: absolute;
     top: 2vh;
     left: 2vw;
+    width: var(--ls-logo-size);
+    height: auto;
     z-index: 3;
 }
+/* Bottom-center column containing the caption, title, bar */
+#loading-screen-content {
+    position: absolute;
+    left: 50%;
+    bottom: var(--ls-bottom-pad);
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(0.3rem, 0.8vmin, 0.8rem);
+    width: var(--ls-bar-width);
+    z-index: 3;
+}
+#loading-screen-detail {
+    font-family: 'lilita-one';
+    font-size: var(--ls-font-detail);
+    color: #ffffff;
+    opacity: 0.9;
+    /* text-shadow scales with font-size — no vw/vh */
+    text-shadow:
+        0 0 0.05em #000,
+        0 0 0.1em rgba(0, 0, 0, 0.6);
+    margin: 0;
+    line-height: 1.1;
+}
+#loading-screen-title {
+    font-family: 'lilita-one-bold';
+    font-size: var(--ls-font-title);
+    color: #ffffff;
+    opacity: 0.9;
+    text-shadow:
+        0 0 0.04em #000,
+        0 0 0.08em #000,
+        0 0 0.15em rgba(0, 0, 0, 0.5);
+    margin: 0;
+    line-height: 1;
+}
 #loading-screen-bar {
-    position: fixed;
-    width: 75vw;
-    height: 5vh;
-    bottom: 10vh;
-    left: 12.5vw;
+    position: relative;            /* needed so the percentage can be absolutely centered inside */
+    width: 100%;
+    height: var(--ls-bar-height);
     background: #055c6c;
     opacity: 0.8;
-    border-radius: 5vw;
-    border: 0.3vw solid #0accee;
-    z-index: 3;
-
-    box-shadow: 
-        inset 0 0 1vh #0accee,   
-        0 0 1.5vh rgba(10, 204, 238, 0.5);
-        
+    border-radius: 999px;
+    border: clamp(2px, 0.3vmin, 5px) solid #0accee;
+    box-shadow:
+        inset 0 0 0.6em #0accee,
+        0 0 1em rgba(10, 204, 238, 0.5);
     overflow: hidden;
 }
 #loading-screen-bar-fill {
     height: 100%;
-    width: 0%; 
+    width: 0%;
     background: linear-gradient(to right, #0accee, #01fbff, #0accee);
-    background-size: 75vw 100%;
-    background-attachment: fixed; 
-    border-radius: inherit; 
-    box-shadow: inset 0 0 1vh rgba(255, 255, 255, 0.3);
+    background-size: 200% 100%;
+    background-repeat: repeat;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0.6em rgba(255, 255, 255, 0.3);
     transition: width 0.3s ease-in-out;
     animation: pulse-energy 1.5s infinite ease-in-out;
 }
-#loading-screen-title {
-    position: fixed;
-    font-family: 'lilita-one-bold';
-    font-size: 5vw;
+#loading-screen-percentage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'lilita-one';
+    font-size: var(--ls-font-percent);
     color: #ffffff;
-    opacity: 0.9;
-    -webkit-text-stroke: 0.2vw #000000;
-    bottom: 13vh;
-    left: 42vw;
-    z-index: 3;
+    opacity: 0.95;
+    text-shadow:
+        0 0 0.05em #000,
+        0 0 0.1em #000;
+    margin: 0;
+    line-height: 1;
+    z-index: 2;
+    /* Sit above the fill bar so it's readable at any width */
+    pointer-events: none;
+    white-space: nowrap;
 }
 #loading-screen-disclaimer-fade {
-    position: fixed;
-    width: 100vw;
-    height: 10vh;
-    bottom: 0vh;
-    left: 0vw;
-    background: linear-gradient(0, #055c6c 0%, #055d6ca4 80%, #055c6c00 100%);
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 15vh;
+    background: linear-gradient(0deg, #055c6c 0%, #055d6ca4 80%, #055c6c00 100%);
     z-index: 2;
+    pointer-events: none;
 }
 #loading-screen-disclaimer {
-    position: fixed;
-    font-family: 'lilita-one';
-    font-size: 1vw;
-    color: #09cccf;
-    bottom: 0vh;
+    position: absolute;
     left: 1vw;
+    bottom: 1vh;
+    font-family: 'lilita-one';
+    font-size: var(--ls-font-disclaim);
+    color: #09cccf;
     opacity: 0.8;
+    margin: 0;
     z-index: 3;
-}
-#loading-screen-detail {
-    position: fixed;
-    font-family: 'lilita-one';
-    font-size: 1.8vw;
-    color: #ffffff;
-    opacity: 0.9;
-    -webkit-text-stroke: 0.07vw #000000;
-    bottom: 13vh;
-    left: 50vw;
-    transform: translateX(-50%);
-    z-index: 3;
-}
-#loading-screen-percentage {
-    position: fixed;
-    font-family: 'lilita-one';
-    font-size: 3.3vw;
-    color: #ffffff;
-    opacity: 0.9;
-    -webkit-text-stroke: 0.1vw #000000;
-    bottom: 5.7vh;
-    left: 50vw;
-    transform: translateX(-50%);
-    z-index: 4;
+    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.6);
 }
