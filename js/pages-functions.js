@@ -19,7 +19,6 @@ export async function load_screen() {
   const [notifEnabled, notifTitle, notifDesc, notifTime, notifImage] = await loading_notif();
   const notif = document.getElementById('loading-screen-notification')
   const img   = document.getElementById('loading-screen-notification-img')
-  notif.hidden = true
   if (notifEnabled === true) {
     document.getElementById('loading-screen-notification-title').textContent = notifTitle;
     document.getElementById('loading-screen-notification-description').textContent = notifDesc;
@@ -60,12 +59,20 @@ export async function load_screen() {
 
   loading_bar.style.width = '10%';
   edit_loading_percentage(10)
+  //check database connection
   await sleep(2000);
   loading_bar.style.width = '50%';
   edit_loading_percentage(50)
+  //do more stuff that happens while loading
   await sleep(1000);
   loading_bar.style.width = '100%';
   edit_loading_percentage(100)
   await sleep(1000)
-  // window.location.hash = 'welcome';
+  //check if logged in
+  const { get_logged_in } = await import('/js/data/localstorage.js');
+  if (await get_logged_in() === true) {
+    Router.go('home');
+  } else {
+    Router.go('welcome');
+  }
 }

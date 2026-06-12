@@ -1,38 +1,32 @@
-// All pages:
-const pages = {
-    'loading': 'loading-screen',
-    'welcome': 'welcome-screen',
-    'home': 'home-screen'
-}
-function hideAll() {
-    for (const key in pages) {
-        const element = document.getElementById(pages[key]);
-        element.style.display = 'none';
+// router.js — load this before your other scripts
+(function () {
+    const pages = {
+        'loading': 'loading-screen',
+        'welcome': 'welcome-screen',
+        'home': 'home-screen'
     }
-}
 
-function showPage(page) {
-    for (const key in pages) {
-        const element = document.getElementById(pages[key]);
-        if (key === page) {
-            element.style.display = 'block';
-        } else {
-            element.style.display = 'none';
+    let _currentPage = null;
+
+    function showPage(page) {
+        if (!pages[page]) {
+            console.warn(`Router: unknown page "${page}"`);
+            return;
         }
+        for (const key in pages) {
+            document.getElementById(pages[key]).style.display = key === page ? 'block' : 'none';
+        }
+        _currentPage = page;
     }
-}
-// detect on which # page the user is and show the correct page
-window.addEventListener('hashchange', () => {
-    const hash = window.location.hash.substring(1);
-    if (pages[hash]) {
-        showPage(hash);
-    } else {
-        showPage('loading');
-    }
-});
-// on page load, show loading page
-window.addEventListener('load', () => {
-    //set window hash to #loading
-    window.location.hash = 'loading';
-    showPage('loading');
-});
+
+    // Expose a controlled API globally
+    window.Router = {
+        go: showPage,
+        current: () => _currentPage,
+        exists: (page) => !!pages[page]
+    };
+
+    window.addEventListener('load', () => {
+        window.Router.go('loading');
+    });
+})();
