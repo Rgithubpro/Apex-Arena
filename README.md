@@ -1,6 +1,6 @@
 # ⚔️ Apex Arena
 
-![Apex Arena Banner](assets/logos/Apex-Arena/logo.png))
+![Apex Arena Banner](assets/logos/Apex-Arena/logo.png)
 *A fast-paced, browser-based multiplayer combat game.*
 
 [![Status: In Development](https://img.shields.io/badge/Status-In%20Development-yellow.svg)](#)
