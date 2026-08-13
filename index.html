@@ -8,9 +8,18 @@
 </head>
 <body>
 <!-- ================================================================
+  SCRIPTS  →  IMPORT SCRIPTS 
+================================================================= -->
+    <script src="js/router.js"></script>
+    <!-- Pages -->
+    <script src="js/pages/loading.js"></script>
+    <script src="js/pages/welcome.js"></script>
+    <script src="js/pages/home.js"></script>
+    
+<!-- ================================================================
   LOADING  →  #loading
-================================================================ -->
-    <div id="loading-screen">
+================================================================= -->
+    <div id="loading-screen" class="page">
         <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/backgrounds/loading.png" onerror="this.onerror=null; this.src='assets/images/backgrounds/loading-screen-no-wifi.png';" alt="" id="loading-screen-image">
         <img src="assets/logos/Apex-Arena/logo.png" alt="Logo" id="loading-screen-logo">
         <div id="loading-screen-content">
@@ -33,7 +42,7 @@
 <!-- ================================================================
   WELCOME  →  #welcome
 ================================================================ -->
-    <div id="welcome-screen">
+    <div id="welcome-screen" class="page">
         <div id="welcome-screen-log-in">
             <h1 id="welcome-screen-titel">Welcome to Apex-Arena</h1>
             <h4 id="welcome-screen-subtitle">Choose how to log in</h4>
@@ -94,7 +103,7 @@
         <!-- Disclaimer-->
         <div id="welcome-screen-disclaimer">
             <h1 id="welcome-screen-disclaimer-title">Welcome to Apex-Arena!</h1>
-            <h2 id="welcome-screen-disclaimer-subtitle">We hope you have a great time!</h2>
+            <h2 id="welcome-screen-disclaimer-subtitle">We hope you have a great time!</h2> <!-- Edit href below this!!-->
             <p id="welcome-screen-disclaimer-txt">But first you have to agree to our <a href="#terms-of-service" id="welcome-screen-terms-link">Terms of Service</a> and <a href="#privacy-policy" id="welcome-screen-privacy-link">Privacy Policy</a>.</p>
             <input type="checkbox" id="welcome-screen-disclaimer-accept">
             <label for="welcome-screen-disclaimer-accept">I agree to the Terms of Service and Privacy Policy</label>
@@ -107,6 +116,7 @@
         </div>
         <!-- Cookies-->
         <div id="welcome-screen-cookies">
+            <h5 id="welcome-screen-cookies-title">Cookies</h5> <!-- Edit href below this!!-->
             <p id="welcome-screen-cookies-text">We use cookies to improve your experience. By clicking "Accept Cookies", you agree to our use of cookies.</p>
             <p id="welcome-screen-cookies-link">Learn more about our <a href="#cookie-policy" id="welcome-screen-cookies-link-text">Cookie Policy</a>.</p>
             <button id="welcome-screen-cookies-button">Accept Cookies</button>
@@ -115,8 +125,8 @@
     </div>
 <!-- ================================================================
   HOME  →  #home
-================================================================ -->
-    <div id="home-screen">
+================================================================= -->
+    <div id="home-screen" class="page">
         <img src="https://figpdkdjdbhnsfilwxae.supabase.co/storage/v1/object/public/backgrounds/background.png" alt="Home screen background" id="home-screen-background">
         <!-- Top -->
         <div id="home-screen-top">
@@ -299,8 +309,5 @@
             </button>
         </div>
     </div>
-    <script src="js/router.js"></script>
-    <script type="module" src="js/pages.js"></script>
-    <script src="js/script.js"></script>
 </body>
 </html>

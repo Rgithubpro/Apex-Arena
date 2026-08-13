@@ -1,3 +1,10 @@
+/* ================================================================
+    IMPORT OTHER CSS FILES
+================================================================ */
+@import "pages/loading.css";
+@import "pages/welcome.css";
+@import "pages/home.css";
+
 /* ROOT */
 :root {
     /* Common type scale — clamp(min, vmin-preferred, max).
@@ -15,6 +22,16 @@
 [hidden] {
   display: none !important;
 }
+.page {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.page.active {
+    display: block;
+    opacity: 1;
+}
+
 /* FONTS */
 @font-face {
   font-family: 'lilita-one';
@@ -28,6 +45,7 @@
   font-weight: bold;
   font-style: normal;
 }
+
 /* KEYFRAMES */
 @keyframes pulse-energy {
     0% { opacity: 0.8; }
@@ -37,240 +55,4 @@
 @keyframes lsn-in {
     from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); }
     to   { opacity: 1; transform: translate(-50%, -50%); }
-}
-/* LOADING SCREEN */
-#loading-screen {
-    position: fixed;
-    inset: 0;
-    background: #0d111f;
-    z-index: 100;
-    overflow: hidden;
-}
-#loading-screen-image {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;       /* fills, may crop, no stretching */
-    object-position: center;
-    z-index: 1;
-}
-#loading-screen-logo {
-    position: absolute;
-    top: 2vh;
-    left: 2vw;
-    width: var(--ls-logo-size);
-    height: auto;
-    z-index: 3;
-}
-/* Bottom-center column containing the caption, title, bar */
-#loading-screen-content {
-    position: absolute;
-    left: 50%;
-    bottom: var(--ls-bottom-pad);
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(0.3rem, 0.8vmin, 0.8rem);
-    width: var(--ls-bar-width);
-    z-index: 3;
-}
-#loading-screen-detail {
-    font-family: 'lilita-one';
-    font-size: var(--ls-font-detail);
-    color: #ffffff;
-    opacity: 0.9;
-    /* text-shadow scales with font-size — no vw/vh */
-    text-shadow:
-        0 0 0.05em #000,
-        0 0 0.1em rgba(0, 0, 0, 0.6);
-    margin: 0;
-    line-height: 1.1;
-}
-#loading-screen-title {
-    font-family: 'lilita-one-bold';
-    font-size: var(--ls-font-title);
-    color: #ffffff;
-    opacity: 0.9;
-    text-shadow:
-        0 0 0.04em #000,
-        0 0 0.08em #000,
-        0 0 0.15em rgba(0, 0, 0, 0.5);
-    margin: 0;
-    line-height: 1;
-}
-#loading-screen-bar {
-    position: relative;            /* needed so the percentage can be absolutely centered inside */
-    width: 100%;
-    height: var(--ls-bar-height);
-    background: #055c6c;
-    opacity: 0.8;
-    border-radius: 999px;
-    border: clamp(2px, 0.3vmin, 5px) solid #0accee;
-    box-shadow:
-        inset 0 0 0.6em #0accee,
-        0 0 1em rgba(10, 204, 238, 0.5);
-    overflow: hidden;
-}
-#loading-screen-bar-fill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(to right, #0accee, #01fbff, #0accee);
-    background-size: 200% 100%;
-    background-repeat: repeat;
-    border-radius: inherit;
-    box-shadow: inset 0 0 0.6em rgba(255, 255, 255, 0.3);
-    transition: width 0.3s ease-in-out;
-    animation: pulse-energy 1.5s infinite ease-in-out;
-}
-#loading-screen-percentage {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-family: 'lilita-one';
-    font-size: var(--ls-font-percent);
-    color: #ffffff;
-    opacity: 0.95;
-    text-shadow:
-        0 0 0.05em #000,
-        0 0 0.1em #000;
-    margin: 0;
-    line-height: 1;
-    z-index: 2;
-    /* Sit above the fill bar so it's readable at any width */
-    pointer-events: none;
-    white-space: nowrap;
-}
-#loading-screen-disclaimer-fade {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    height: 15vh;
-    background: linear-gradient(0deg, #055c6c 0%, #055d6ca4 80%, #055c6c00 100%);
-    z-index: 2;
-    pointer-events: none;
-}
-#loading-screen-disclaimer {
-    position: absolute;
-    left: 1vw;
-    bottom: 1vh;
-    font-family: 'lilita-one';
-    font-size: var(--ls-font-disclaim);
-    color: #09cccf;
-    opacity: 0.8;
-    margin: 0;
-    z-index: 3;
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.6);
-}
-/* ===================== LOADING — NOTIFICATION =====================
-   Hidden by default. Toggle from JS by removing the `hidden` attr
-   on #loading-screen-notification. When visible, also add
-   `class="has-notification"` to <body> to pause the bar pulse. */
-#loading-screen-notification {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 4;
-
-    width: min(92vw, 520px);
-    padding: clamp(1rem, 2.4vmin, 1.6rem)
-             clamp(1.1rem, 2.8vmin, 1.8rem);
-
-    background: linear-gradient(180deg, #0d2740 0%, #08182a 100%);
-    border: 1px solid rgba(10, 204, 238, 0.45);
-    border-radius: clamp(14px, 1.6vmin, 22px);
-    box-shadow:
-        0 10px 40px rgba(0, 0, 0, 0.55),
-        0 0 0 1px rgba(10, 204, 238, 0.15) inset,
-        0 0 30px rgba(10, 204, 238, 0.18);
-
-    color: #ffffff;
-    font-family: 'lilita-one';
-    text-align: center;
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(0.5rem, 1.2vmin, 0.9rem);
-
-    animation: lsn-in 0.22s ease-out;
-}
-/* Soft dim behind the popup, only when it's visible */
-#loading-screen-notification::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    z-index: -1;
-    pointer-events: none;
-    border-radius: inherit;
-}
-#loading-screen-notification-title {
-    font-family: 'lilita-one-bold';
-    font-size: clamp(1.4rem, 3.4vmin, 2.2rem);
-    color: #ffffff;
-    margin: 0;
-    line-height: 1.1;
-    text-shadow:
-        0 0 0.04em #000,
-        0 0 0.15em rgba(0, 0, 0, 0.5);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5em;
-}
-/* The "live" pulse dot — sits just before the title text */
-#loading-screen-notification-title::before {
-    content: "";
-    width: 0.55em;
-    height: 0.55em;
-    border-radius: 50%;
-    background: #ff5566;
-    box-shadow: 0 0 0.6em #ff5566, 0 0 1.2em rgba(255, 85, 102, 0.6);
-    animation: pulse-energy 1.4s infinite ease-in-out;
-    flex-shrink: 0;
-}
-#loading-screen-notification-description {
-    font-family: 'lilita-one';
-    font-size: clamp(0.95rem, 2vmin, 1.2rem);
-    color: #d8efff;
-    opacity: 0.92;
-    margin: 0;
-    line-height: 1.35;
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.6);
-    max-width: 38ch;
-}
-#loading-screen-notification-time {
-    font-family: 'lilita-one';
-    font-size: clamp(0.85rem, 1.7vmin, 1.05rem);
-    color: #0accee;
-    opacity: 0.95;
-    margin: 0;
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.6);
-}
-/* Image slot — fixed aspect ratio so layout is stable with or without an image */
-#loading-screen-notification-img {
-    width: 100%;
-    margin-top: clamp(0.3rem, 0.8vmin, 0.6rem);
-    aspect-ratio: 16 / 9;
-    border-radius: clamp(10px, 1.2vmin, 16px);
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.04);
-    display: none;
-    border: 1px solid rgba(10, 204, 238, 0.25);
-    object-fit: contain;
-}
-/* When the notification is visible, freeze the loading bar pulse */
-body.has-notification #loading-screen-bar-fill {
-    animation-play-state: paused;
-    opacity: 0.55;
-    filter: saturate(0.6);
-    transition: opacity 0.2s ease, filter 0.2s ease;
-}
-body.has-notification #loading-screen-percentage {
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
 }
