@@ -7,7 +7,7 @@
 [![Status: In Development](https://img.shields.io/badge/Status-In%20Development-yellow.svg)](#)
 [![Tech: HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](#)
 [![Tech: CSS](https://img.shields.io/badge/CSS-663399?logo=css&logoColor=white)](#)
-[![Tech: JavaScript](https://img.shields.io/badge/JavaScript-C99700?logo=javascript&logoColor=white)](#)
+[![Tech: JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=323330)](#)
 
 ## 📖 About the Project
 
