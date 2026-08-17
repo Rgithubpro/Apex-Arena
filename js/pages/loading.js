@@ -17,6 +17,12 @@ Router.register('loading', (() => {
 		}
 	}
 
+    async function edit_loading_detail(target) {
+        const loading_detail = document.getElementById('loading-screen-detail');
+        if (!loading_detail) return;
+        loading_detail.textContent = target;
+    }
+
 	return {
 		async start() {
 			if (_running) return;
@@ -70,6 +76,7 @@ Router.register('loading', (() => {
 			}, 400);
 
 			const loading_bar = document.getElementById('loading-screen-bar-fill');
+            edit_loading_detail('Initializing...');
 
 			if (loading_bar) loading_bar.style.width = '10%';
 			edit_loading_percentage(10);
@@ -79,13 +86,15 @@ Router.register('loading', (() => {
 
 			if (!_running) return;
 			if (loading_bar) loading_bar.style.width = '50%';
-			edit_loading_percentage(50);
+            edit_loading_detail('Loading content...');
+            edit_loading_percentage(50);
 
 			await sleep(1000);
 
 			if (!_running) return;
 			if (loading_bar) loading_bar.style.width = '100%';
-			edit_loading_percentage(100);
+            edit_loading_detail('Finalizing...');
+            edit_loading_percentage(100);
 
 			await sleep(1000);
 

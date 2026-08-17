@@ -5,12 +5,14 @@
         'home': 'home-screen'
     };
 
-    let _currentPage = null;
-    const modules = {}; // pageName -> { start(), stop() }
+    const DEFAULT_DURATION = 150; // ms
 
-    function showPage(page) {
+    let _currentPage = null;
+    const modules = {};
+
+    function showPage(page, duration = DEFAULT_DURATION) {
         if (!pages[page]) {
-            console.error(`Router: unknown page "${page}"`);
+            console.warn(`Router: unknown page "${page}"`);
             return;
         }
         if (page === _currentPage) return;
@@ -19,22 +21,30 @@
         const outgoingEl = outgoingKey ? document.getElementById(pages[outgoingKey]) : null;
         const incomingEl = document.getElementById(pages[page]);
 
-        // stop outgoing page's script (kills animations, listeners, intervals)
         if (outgoingKey && modules[outgoingKey]?.stop) {
             modules[outgoingKey].stop();
         }
 
+        // apply custom duration inline (overrides CSS default for this transition only)
+        if (incomingEl) incomingEl.style.transitionDuration = `${duration}ms`;
+        if (outgoingEl) outgoingEl.style.transitionDuration = `${duration}ms`;
+
+        if (incomingEl) incomingEl.classList.add('active');
+
         if (outgoingEl) {
             outgoingEl.classList.remove('active');
+            outgoingEl.classList.add('fading-out');
         }
 
-        // let the fade-out finish before showing the new page
-        // (skip this timeout if you don't want transitions)
-        setTimeout(() => {
-            if (incomingEl) incomingEl.classList.add('active');
-            _currentPage = page;
-            if (modules[page]?.start) modules[page].start();
-        }, outgoingEl ? 250 : 0);
+        _currentPage = page;
+        if (modules[page]?.start) modules[page].start();
+
+        if (outgoingEl) {
+            setTimeout(() => {
+                outgoingEl.classList.remove('fading-out');
+                outgoingEl.style.transitionDuration = ''; // reset to CSS default
+            }, duration);
+        }
     }
 
     window.Router = {
