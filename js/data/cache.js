@@ -32,7 +32,7 @@
  * Usage from your loading script (works identically in dev and prod —
  * dev mode just has nothing to pre-sync, see syncAssets below):
  *
- *   import { syncAssets } from '/js/data/cache.js';
+ *   import { syncAssets } from './js/data/cache.js';
  *   const result = await syncAssets({ onProgress: (pct, detail) => {...} });
  *   if (result.status === 'failed') {
  *     // show your "please reload / report on GitHub" notice
@@ -42,7 +42,7 @@
  * dev mode fetches fresh from disk each time, prod reads the synced
  * cache):
  *
- *   import { getAsset, applyAssetAttributes } from '/js/data/cache.js';
+ *   import { getAsset, applyAssetAttributes } from './js/data/cache.js';
  *   img.src = await getAsset('assets/logos/logo-apple.png');
  *
  *   // or, to auto-fill every <img data-asset="..."> on a page:

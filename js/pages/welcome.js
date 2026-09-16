@@ -226,7 +226,8 @@ Router.register('welcome', (() => {
     async function loadPolicies() {
         if (policiesLoaded) return;
 
-        const { middlewareGet } = await import('/js/data/middleware.js');
+        const app_base_url = new URL('./', document.baseURI);
+        const { middlewareGet } = await import(new URL('js/data/middleware.js', app_base_url).href);
         const policyEntries = await Promise.all(Object.entries(POLICY_KEYS).map(async ([type, key]) => {
             const row = await middlewareGet('general-data', key);
             if (!row?.value) return [type, null];
@@ -743,7 +744,8 @@ Router.register('welcome', (() => {
 
     return {
         async start() {
-            const { syncAssets, applyAssetAttributes, getAsset, IS_DEV } = await import('/js/data/cache.js');
+            const app_base_url = new URL('./', document.baseURI);
+            const { syncAssets, applyAssetAttributes, getAsset, IS_DEV } = await import(new URL('js/data/cache.js', app_base_url).href);
             getAssetFn = getAsset;
             const result = await syncAssets({ onProgress: (pct, detail) => {} });
             if (result.status === 'failed') {

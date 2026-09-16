@@ -1,6 +1,8 @@
 Router.register('loading', (() => {
 	let _running = false;
 	let _titleInterval = null;
+	const app_base_url = new URL('./', document.baseURI);
+	const app_module_url = path => new URL(path, app_base_url).href;
 
 	function sleep(ms) {
 		return new Promise(resolve => setTimeout(resolve, ms));
@@ -82,7 +84,7 @@ Router.register('loading', (() => {
 			edit_loading_percentage(1);
 
 			// Print game version in console
-			const { fetchGameVersion } = await import('/js/data/cache.js');
+			const { fetchGameVersion } = await import(app_module_url('js/data/cache.js'));
 			try {
 				const gameVersion = await fetchGameVersion();
 				console.log(`GAME | Game Version = ${gameVersion}`);
@@ -92,7 +94,7 @@ Router.register('loading', (() => {
 
 			// Notification block (may short-circuit the rest)
 			try {
-				const { loading_notif } = await import('/js/data/database/extra.js');
+				const { loading_notif } = await import(app_module_url('js/data/database/extra.js'));
 				const [notifEnabled, notifTitle, notifDesc, notifTime, notifImage] = await loading_notif();
 				const notif = document.getElementById('loading-screen-notification');
 				const img   = document.getElementById('loading-screen-notification-img');
@@ -133,7 +135,7 @@ Router.register('loading', (() => {
 			// Here we just react to the result.
 			let syncResult;
 			try {
-				const { syncAssets } = await import('/js/data/cache.js');
+				const { syncAssets } = await import(app_module_url('js/data/cache.js'));
 				syncResult = await syncAssets({
 					onProgress: (pct, detail) => {
 						if (!_running) return;
@@ -167,7 +169,7 @@ Router.register('loading', (() => {
 
 			if (!_running) return;
 			try {
-				const { get_logged_in } = await import('/js/data/localstorage.js');
+				const { get_logged_in } = await import(app_module_url('js/data/localstorage.js'));
 				if (await get_logged_in() === true) {
 					Router.go('home');
 				} else {
