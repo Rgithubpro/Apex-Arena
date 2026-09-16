@@ -1,10 +1,1353 @@
+/* ================================================================
+   WELCOME SCREEN — login/signup flow
+   Reuses loading-screen's cyan-glow / lilita-one visual language.
+================================================================= */
+
+:root {
+    /* Local type + spacing scale — bumped up across the board per
+       feedback ("everything was very small"). */
+    --ws-font-title:      clamp(2.1rem, 5.4vmin, 3.6rem);
+    --ws-font-subtitle:   clamp(1rem, 2.1vmin, 1.35rem);
+    --ws-font-subsubtitle:clamp(0.85rem, 1.5vmin, 1.05rem);
+    --ws-font-body:       clamp(1rem, 1.9vmin, 1.2rem);
+    --ws-font-label:      clamp(0.95rem, 1.8vmin, 1.15rem);
+    --ws-font-small:      clamp(0.8rem, 1.35vmin, 0.95rem);
+
+    --ws-card-width:      min(94vw, 560px);
+    --ws-card-pad:        clamp(1.8rem, 4vmin, 3rem);
+    --ws-radius-lg:       clamp(20px, 2.4vmin, 30px);
+    --ws-radius-md:       clamp(14px, 1.8vmin, 20px);
+    --ws-radius-pill:     999px;
+    --ws-gap:             clamp(0.8rem, 1.8vmin, 1.2rem);
+
+    --ws-cyan:            #0accee;
+    --ws-cyan-bright:     #01fbff;
+    --ws-bg-deep:         #0d111f;
+    --ws-panel-top:       #0d2740;
+    --ws-panel-bottom:    #08182a;
+    --ws-text:            #ffffff;
+    --ws-text-dim:        #d8efff;
+}
+
+/* ---------- Screen root ---------- */
+#welcome-screen {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(120% 120% at 50% 0%, #0f3550 0%, #082033 45%, #050d18 100%);
+    overflow: hidden;
+    font-family: 'lilita-one';
+    color: var(--ws-text);
+}
+
 #networkCanvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-      background-color: #000000;
-      z-index: -1;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.85; /* was 0.55 — feedback: barely noticeable */
+}
+
+/* Generic centered-panel positioning shared by every step in the flow.
+   Each step is a direct child wrapper that gets shown/hidden by JS
+   via the `.ws-active` class, so we can crossfade between steps.
+   Flexbox centering here is what actually puts the card in the
+   middle of the viewport (previous version was missing this on
+   some steps, which is why things ended up pinned top-left). */
+.ws-step {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 4vw, 2rem);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px) scale(0.985);
+    transition: opacity 0.32s cubic-bezier(.22,.61,.36,1),
+                transform 0.36s cubic-bezier(.22,.61,.36,1);
+    z-index: 1;
+    box-sizing: border-box;
+}
+.ws-step.ws-active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+    z-index: 2;
+}
+.ws-step.ws-leaving {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+}
+
+/* ---------- Shared "glass card" look ---------- */
+.ws-card {
+    width: 100%;
+    max-width: var(--ws-card-width);
+    box-sizing: border-box;
+    padding: var(--ws-card-pad);
+    background: linear-gradient(180deg, var(--ws-panel-top) 0%, var(--ws-panel-bottom) 100%);
+    border: 1px solid rgba(10, 204, 238, 0.4);
+    border-radius: var(--ws-radius-lg);
+    box-shadow:
+        0 14px 48px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(10, 204, 238, 0.12) inset,
+        0 0 34px rgba(10, 204, 238, 0.16);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--ws-gap);
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.ws-card-title {
+    font-family: 'lilita-one-bold';
+    font-size: var(--ws-font-title);
+    line-height: 1.15;
+    margin: 0;
+    color: var(--ws-text);
+    text-shadow: 0 0 0.04em #000, 0 0 0.15em rgba(0,0,0,0.5);
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+.ws-card-subtitle {
+    font-size: var(--ws-font-subtitle);
+    color: var(--ws-text-dim);
+    opacity: 0.95;
+    margin: 0;
+    line-height: 1.4;
+}
+.ws-card-subsubtitle {
+    font-size: var(--ws-font-subsubtitle);
+    color: var(--ws-text-dim);
+    opacity: 0.7;
+    margin: 0;
+    line-height: 1.4;
+    max-width: 38ch;
+}
+
+/* ================================================================
+   LOG-IN CHOICE  →  #welcome-screen-log-in
+================================================================= */
+#welcome-screen-log-in .ws-card {
+    max-width: 640px;
+}
+
+#welcome-screen-title {
+    /* "Apex-Arena" is long — let this title shrink a touch more
+       aggressively than the generic --ws-font-title so it still
+       fits one line at var(--ws-card-width), only on this specific
+       screen (other screens with longer titles, like the disclaimer's
+       "Welcome to Apex-Arena!", must stay free to wrap). */
+    font-size: clamp(1.5rem, 4.6vmin, 3.2rem);
+    white-space: nowrap;
+}
+
+/* The disclaimer/service/welcome-back titles can be longer than the
+   root login title ("Welcome to Apex-Arena!", "Connecting to
+   Microsoft…") — these must wrap onto a second line rather than
+   overflow the card, since they aren't length-controlled like the
+   root title above. */
+#welcome-screen-disclaimer-title,
+#welcome-screen-service-title,
+#welcome-screen-welcome-back-title {
+    white-space: normal;
+    word-break: break-word;
+}
+
+#welcome-screen-login-options {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(0.7rem, 1.6vmin, 1rem);
+    margin-top: clamp(0.4rem, 1vmin, 0.7rem);
+}
+
+.welcome-screen-login-option {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.6rem, 1.6vmin, 0.9rem);
+    padding: clamp(0.85rem, 2vmin, 1.15rem) clamp(1rem, 2.4vmin, 1.3rem);
+    background: rgba(10, 204, 238, 0.08);
+    border: 1px solid rgba(10, 204, 238, 0.3);
+    border-radius: var(--ws-radius-md);
+    color: var(--ws-text);
+    font-family: 'lilita-one';
+    font-size: var(--ws-font-label);
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease,
+                transform 0.12s ease, box-shadow 0.16s ease;
+}
+.welcome-screen-login-option-icon {
+    width: clamp(22px, 3.4vmin, 28px);
+    height: clamp(22px, 3.4vmin, 28px);
+    object-fit: contain;
+    flex-shrink: 0;
+}
+.welcome-screen-login-option p {
+    margin: 0;
+    text-align: left;
+    line-height: 1.2;
+    color: var(--ws-text);
+}
+
+.welcome-screen-login-option:hover {
+    background: rgba(10, 204, 238, 0.16);
+    border-color: rgba(10, 204, 238, 0.55);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 18px rgba(10, 204, 238, 0.18);
+}
+.welcome-screen-login-option:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+}
+.welcome-screen-login-option:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--ws-cyan-bright);
+    outline-offset: 2px;
+}
+
+/* Disabled / "working" state used while a fake service login runs */
+.welcome-screen-login-option.ws-loading,
+.welcome-screen-login-option:disabled {
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+/* Guest button — this is a plain <button>, so it needs every visual
+   property spelled out explicitly; it was previously relying on
+   inherited styles that don't apply to buttons (text color, font,
+   background) which is why it rendered as unstyled black-on-dark. */
+#welcome-screen-guest-button {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: clamp(0.7rem, 1.8vmin, 1.1rem);
+    padding: clamp(0.9rem, 2vmin, 1.2rem) clamp(1.1rem, 2.6vmin, 1.5rem);
+    display: flex;
+    align-items: center;
+    gap: clamp(0.7rem, 1.8vmin, 1rem);
+    background: linear-gradient(to right, rgba(10,204,238,0.14), rgba(1,251,255,0.10));
+    border: 1px solid rgba(10, 204, 238, 0.4);
+    border-radius: var(--ws-radius-md);
+    cursor: pointer;
+    text-align: left;
+    font-family: 'lilita-one';
+    color: var(--ws-text);
+    transition: background 0.16s ease, transform 0.12s ease, border-color 0.16s ease;
+    position: relative;
+}
+#welcome-screen-guest-button::before {
+    /* thin divider above the guest button */
+    content: "";
+    position: absolute;
+    top: calc(-1 * clamp(0.7rem, 1.8vmin, 1.1rem) / 2 - 1px);
+    left: 8%;
+    width: 84%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(10,204,238,0.35), transparent);
+}
+#welcome-screen-guest-button:hover {
+    background: linear-gradient(to right, rgba(10,204,238,0.22), rgba(1,251,255,0.16));
+    border-color: rgba(10, 204, 238, 0.65);
+    transform: translateY(-1px);
+}
+#welcome-screen-guest-button:active { transform: translateY(0); }
+
+#welcome-screen-guest-button-icon {
+    width: clamp(24px, 3.6vmin, 30px);
+    height: clamp(24px, 3.6vmin, 30px);
+    object-fit: contain;
+    flex-shrink: 0;
+}
+#welcome-screen-guest-button-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15em;
+}
+#welcome-screen-guest-button-text {
+    margin: 0;
+    font-size: var(--ws-font-label);
+    line-height: 1.2;
+    color: var(--ws-text);
+    font-family: 'lilita-one';
+}
+#welcome-screen-guest-button-subtext {
+    margin: 0;
+    font-size: var(--ws-font-small);
+    color: var(--ws-text-dim);
+    opacity: 0.7;
+    line-height: 1.2;
+    font-family: 'lilita-one';
+}
+
+/* ================================================================
+   BACK BUTTON — same fixed top-left placement on every step
+================================================================= */
+.ws-back-button {
+    position: absolute;
+    top: clamp(1rem, 3vh, 1.6rem);
+    left: clamp(1rem, 3vw, 1.6rem);
+    width: clamp(40px, 5.5vmin, 48px);
+    height: clamp(40px, 5.5vmin, 48px);
+    border-radius: 50%;
+    background: rgba(10, 204, 238, 0.1);
+    border: 1px solid rgba(10, 204, 238, 0.35);
+    color: var(--ws-text);
+    font-family: 'lilita-one';
+    font-size: clamp(1.1rem, 2.2vmin, 1.4rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+    padding: 0;
+    line-height: 1;
+    transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.ws-back-button:hover {
+    background: rgba(10, 204, 238, 0.2);
+    border-color: rgba(10, 204, 238, 0.6);
+    transform: translateX(-2px);
+}
+.ws-back-button:active { transform: translateX(0); }
+
+/* ================================================================
+   SERVICE "CONTINUE" STEP  →  placeholder while pretending to auth
+================================================================= */
+.ws-service-spinner {
+    width: clamp(50px, 7.5vmin, 68px);
+    height: clamp(50px, 7.5vmin, 68px);
+    border-radius: 50%;
+    border: clamp(3px, 0.6vmin, 5px) solid rgba(10, 204, 238, 0.2);
+    border-top-color: var(--ws-cyan-bright);
+    animation: ws-spin 0.9s linear infinite;
+    margin: clamp(0.4rem, 1vmin, 0.8rem) 0;
+}
+@keyframes ws-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ================================================================
+/* ================================================================
+   E-MAIL LOGIN / SIGNUP  →  direct port of a proven, working sliding
+   form pattern. Structure, class names' behavior, and every timing
+   value below intentionally mirror the reference implementation
+   exactly — only colors/fonts/icons were swapped to match our theme.
+   Do not "simplify" this; the specific transition-delay values are
+   what make the two halves (circle / form / panel text) hand off to
+   each other without a visible seam.
+================================================================= */
+#welcome-screen-email {
+    position: relative;
+    width: 80vw;
+    max-width: 760px;
+    min-height: 700px;
+    box-sizing: border-box;
+    background-color: var(--ws-panel-bottom);
+    border-radius: var(--ws-radius-lg);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35), 0 0 34px rgba(10, 204, 238, 0.16);
+    overflow: hidden;
+}
+
+#welcome-screen-email-forms {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    left: 75%;
+    width: 50%;
+    transition: 1s 0.7s ease-in-out;
+    display: grid;
+    grid-template-columns: 1fr;
+    z-index: 5;
+}
+
+.ws-email-layer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: clamp(1.5rem, 3vh, 2.5rem) clamp(1.5rem, 4vw, 3.5rem);
+    box-sizing: border-box;
+    max-height: 100%;
+    overflow-y: auto;
+    transition: all 0.2s 0.7s;
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    gap: clamp(0.6rem, 1.4vmin, 0.9rem);
+    text-align: center;
+}
+
+#welcome-screen-email-login {
+    z-index: 2;
+}
+
+#welcome-screen-email-signup {
+    opacity: 0;
+    z-index: 1;
+}
+
+#welcome-screen-email-login-title,
+#welcome-screen-email-signup-title {
+    font-family: 'lilita-one-bold';
+    font-size: clamp(1.6rem, 3.8vmin, 2.2rem);
+    color: var(--ws-text);
+    margin: 0;
+    text-shadow: 0 0 0.04em #000, 0 0 0.15em rgba(0,0,0,0.5);
+}
+#welcome-screen-email-login-subtitle,
+#welcome-screen-email-signup-subtitle {
+    font-size: var(--ws-font-subtitle);
+    color: var(--ws-text-dim);
+    opacity: 0.9;
+    margin: 0 0 0.2rem;
+    line-height: 1.4;
+}
+
+#welcome-screen-email-login-form,
+#welcome-screen-email-signup-form {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.6rem, 1.5vmin, 0.9rem);
+    align-items: center;
+    position: relative;
+}
+
+.ws-input-wrap {
+    max-width: 380px;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.05);
+    margin: 0;
+    border-radius: 55px;
+    position: relative;
+    box-sizing: border-box;
+    border: 1px solid rgba(10, 204, 238, 0.3);
+    transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.ws-input-wrap input {
+    width: 100%;
+    box-sizing: border-box;
+    background: none;
+    outline: none;
+    border: none;
+    line-height: 1;
+    font-weight: 600;
+    font-family: 'lilita-one';
+    font-size: var(--ws-font-body);
+    color: var(--ws-text);
+    padding: clamp(0.85rem, 2vmin, 1.05rem) clamp(1.2rem, 2.6vmin, 1.4rem);
+    appearance: none;
+    -webkit-appearance: none;
+}
+.ws-input-wrap:has(button) input { padding-right: clamp(2.6rem, 5.4vmin, 3.2rem); }
+.ws-input-wrap input::placeholder {
+    color: rgba(216, 239, 255, 0.45);
+    font-weight: 500;
+    font-family: 'lilita-one';
+}
+.ws-input-wrap:focus-within {
+    border-color: var(--ws-cyan);
+    background: rgba(10, 204, 238, 0.08);
+    box-shadow: 0 0 0 3px rgba(10, 204, 238, 0.15);
+}
+.ws-input-wrap input:-webkit-autofill,
+.ws-input-wrap input:-webkit-autofill:hover,
+.ws-input-wrap input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--ws-text);
+    -webkit-box-shadow: 0 0 0px 1000px rgba(13, 39, 64, 0.9) inset;
+    transition: background-color 9999s ease-in-out 0s;
+    caret-color: var(--ws-text);
+}
+.ws-input-wrap input.ws-invalid {
+    border-color: #ff5566;
+}
+.ws-input-wrap.ws-wrap-invalid {
+    border-color: #ff5566;
+    box-shadow: 0 0 0 3px rgba(255, 85, 102, 0.15);
+}
+.ws-input-wrap.ws-wrap-valid {
+    border-color: #35e08a;
+    box-shadow: 0 0 0 3px rgba(53, 224, 138, 0.13);
+}
+
+.ws-input-wrap button[id*="show-password"] {
+    position: absolute;
+    right: clamp(0.5rem, 1.2vmin, 0.9rem);
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(28px, 4.4vmin, 34px);
+    height: clamp(28px, 4.4vmin, 34px);
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    opacity: 0.65;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+.ws-input-wrap button[id*="show-password"]:hover {
+    opacity: 1;
+    background: rgba(10, 204, 238, 0.12);
+}
+.ws-input-wrap button[id*="show-password"] img {
+    width: 60%;
+    height: 60%;
+    object-fit: contain;
+    transition: opacity 0.15s ease, transform 0.25s ease;
+}
+.ws-input-wrap button[id*="show-password"] img.ws-icon-swapping {
+    opacity: 0;
+    transform: scale(0.7);
+}
+
+.ws-field-hint {
+    width: 100%;
+    max-width: 380px;
+    box-sizing: border-box;
+    margin: -0.3rem 0 0;
+    padding: 0 0.6rem;
+    font-size: var(--ws-font-small);
+    line-height: 1.3;
+    text-align: left;
+    min-height: 1.3em;
+    color: var(--ws-text-dim);
+    opacity: 0.75;
+    font-family: 'lilita-one';
+    transition: color 0.15s ease, opacity 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+}
+.ws-field-hint::before {
+    content: "";
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.ws-field-hint.ws-hint-checking { color: var(--ws-cyan); opacity: 0.85; }
+.ws-field-hint.ws-hint-checking::before {
+    opacity: 1;
+    animation: pulse-energy 1s infinite ease-in-out;
+}
+.ws-field-hint.ws-hint-ok { color: #35e08a; opacity: 1; }
+.ws-field-hint.ws-hint-ok::before { opacity: 1; background: #35e08a; }
+.ws-field-hint.ws-hint-bad { color: #ff8a94; opacity: 1; }
+.ws-field-hint.ws-hint-bad::before { opacity: 1; background: #ff5566; }
+
+.ws-strength-meter {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    gap: 0.3rem;
+    margin-top: -0.2rem;
+}
+.ws-strength-meter-seg {
+    flex: 1;
+    height: clamp(4px, 0.6vmin, 6px);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    transition: background 0.2s ease;
+}
+.ws-strength-meter[data-strength="1"] .ws-strength-meter-seg:nth-child(1) { background: #ff5566; }
+.ws-strength-meter[data-strength="2"] .ws-strength-meter-seg:nth-child(-n+2) { background: #ffb020; }
+.ws-strength-meter[data-strength="3"] .ws-strength-meter-seg:nth-child(-n+3) { background: #7fd858; }
+.ws-strength-meter[data-strength="4"] .ws-strength-meter-seg { background: #35e08a; }
+.ws-strength-label {
+    width: 100%;
+    max-width: 380px;
+    text-align: left;
+    font-size: var(--ws-font-small);
+    color: var(--ws-text-dim);
+    opacity: 0.7;
+    margin: -0.2rem 0 0;
+    padding: 0 0.6rem;
+    font-family: 'lilita-one';
+    min-height: 1.2em;
+    box-sizing: border-box;
+}
+
+#welcome-screen-email-login-button,
+#welcome-screen-email-signup-button {
+    width: 150px;
+    background: linear-gradient(to right, var(--ws-cyan), var(--ws-cyan-bright), var(--ws-cyan));
+    background-size: 200% 100%;
+    border: none;
+    outline: none;
+    height: 49px;
+    border-radius: 49px;
+    color: #08182a;
+    font-family: 'lilita-one-bold';
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease, background-position 0.4s ease;
+    box-shadow: inset 0 0 0.4em rgba(255, 255, 255, 0.4), 0 0 1em rgba(10, 204, 238, 0.5);
+    position: relative;
+}
+#welcome-screen-email-login-button:hover,
+#welcome-screen-email-signup-button:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    background-position: 100% 0;
+}
+#welcome-screen-email-login-button:active,
+#welcome-screen-email-signup-button:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+}
+
+/* Guest / disclaimer / welcome-back buttons live in plain .ws-card
+   layouts (not the sliding e-mail card), so they stay full-width
+   pills matching the rest of that card instead of Gemini's fixed
+   150px e-mail buttons above. */
+#welcome-screen-guest-signup-continue-button,
+#welcome-screen-disclaimer-button,
+#welcome-screen-welcome-back-button {
+    width: 100%;
+    margin-top: clamp(0.2rem, 0.6vmin, 0.4rem);
+    padding: clamp(0.8rem, 1.9vmin, 1.05rem) clamp(1.4rem, 3vmin, 2rem);
+    font-family: 'lilita-one-bold';
+    font-size: clamp(1rem, 2.1vmin, 1.25rem);
+    color: #08182a;
+    background: linear-gradient(to right, var(--ws-cyan), var(--ws-cyan-bright), var(--ws-cyan));
+    background-size: 200% 100%;
+    border: none;
+    border-radius: var(--ws-radius-pill);
+    cursor: pointer;
+    box-shadow:
+        inset 0 0 0.4em rgba(255, 255, 255, 0.4),
+        0 0 1em rgba(10, 204, 238, 0.5);
+    transition: transform 0.12s ease, filter 0.12s ease, background-position 0.4s ease;
+    position: relative;
+}
+#welcome-screen-guest-signup-continue-button:hover,
+#welcome-screen-disclaimer-button:hover,
+#welcome-screen-welcome-back-button:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    background-position: 100% 0;
+}
+#welcome-screen-guest-signup-continue-button:active,
+#welcome-screen-disclaimer-button:active,
+#welcome-screen-welcome-back-button:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.ws-btn-working { color: transparent !important; pointer-events: none; }
+.ws-btn-working::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.1em;
+    height: 1.1em;
+    margin: -0.55em 0 0 -0.55em;
+    border-radius: 50%;
+    border: 0.16em solid rgba(8, 24, 42, 0.25);
+    border-top-color: #08182a;
+    animation: ws-spin 0.7s linear infinite;
+}
+
+#welcome-screen-email-login-forgot {
+    font-size: var(--ws-font-small);
+    color: var(--ws-text-dim);
+    opacity: 0.75;
+    text-decoration: none;
+    font-family: 'lilita-one';
+    align-self: flex-end;
+    max-width: 380px;
+    transition: opacity 0.15s ease, color 0.15s ease;
+}
+#welcome-screen-email-login-forgot:hover {
+    opacity: 1;
+    color: var(--ws-cyan-bright);
+}
+
+/* ---------- Two-panel background (the curved circle lives here) ---------- */
+.ws-email-panels {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+#welcome-screen-email::before {
+    content: "";
+    position: absolute;
+    height: 2000px;
+    width: 2000px;
+    top: -10%;
+    right: 48%;
+    transform: translateY(-50%);
+    background: linear-gradient(-45deg, #0f3a56, #123a5c);
+    border: 1px solid rgba(10, 204, 238, 0.25);
+    transition: 1.8s ease-in-out;
+    border-radius: 50%;
+    z-index: 6;
+}
+
+.ws-email-teaser {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 6;
+    padding: 0 16%;
+    box-sizing: border-box;
+}
+
+#welcome-screen-email-teaser-signup {
+    pointer-events: all;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: clamp(2rem, 7%, 4rem) clamp(1.5rem, 8%, 3rem);
+    text-align: left;
+}
+
+#welcome-screen-email-teaser-login {
+    pointer-events: none;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: clamp(2rem, 7%, 4rem) clamp(1.5rem, 8%, 3rem);
+    text-align: right;
+}
+
+.ws-email-teaser-inner {
+    color: var(--ws-text);
+    transition: transform 0.9s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#welcome-screen-email-teaser-signup .ws-email-teaser-inner {
+    align-items: flex-start;
+}
+
+#welcome-screen-email-teaser-login .ws-email-teaser-inner {
+    align-items: flex-end;
+}
+
+#welcome-screen-email-teaser-signup .ws-email-teaser-inner {
+    transform: translateX(0);
+    transition-delay: 0.6s;
+}
+
+#welcome-screen-email-teaser-login .ws-email-teaser-inner {
+    transform: translateX(800px);
+    transition-delay: 0s;
+}
+
+.ws-email-teaser h3 {
+    font-family: 'lilita-one-bold';
+    font-weight: 600;
+    line-height: 1;
+    font-size: clamp(1.8rem, 4.2vmin, 2.35rem);
+    margin-bottom: 20px;
+    text-shadow: 0 0 0.04em #000, 0 0 0.15em rgba(0,0,0,0.5);
+}
+
+.ws-email-teaser p {
+    font-family: 'lilita-one';
+    font-size: clamp(1.1rem, 2.2vmin, 1.4rem);
+    color: var(--ws-text-dim);
+    padding: 0.9rem 0;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    max-width: 34ch;
+}
+
+.ws-email-teaser-button {
+    margin: 0;
+    background: none;
+    border: 2px solid rgba(10, 204, 238, 0.55);
+    width: 160px;
+    height: 50px;
+    border-radius: 50px;
+    color: var(--ws-text);
+    font-family: 'lilita-one-bold';
+    font-weight: 600;
+    font-size: var(--ws-font-body);
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ws-email-teaser-button:hover {
+    background-color: rgba(10, 204, 238, 0.14);
+    border-color: var(--ws-cyan-bright);
+    box-shadow: 0 0 1.2em rgba(10, 204, 238, 0.35);
+    transform: translateY(-1px);
+}
+.ws-email-teaser-button:active { transform: translateY(0); }
+
+/* ---------- ANIMATION: data-mode="signup" (desktop) ---------- */
+#welcome-screen-email[data-mode="signup"]::before {
+    transform: translate(100%, -50%);
+    right: 52%;
+}
+
+#welcome-screen-email[data-mode="signup"] #welcome-screen-email-forms {
+    left: 25%;
+}
+
+#welcome-screen-email[data-mode="signup"] #welcome-screen-email-login {
+    opacity: 0;
+    z-index: 1;
+    transition: all 0.2s 0s;
+}
+
+#welcome-screen-email[data-mode="signup"] #welcome-screen-email-signup {
+    opacity: 1;
+    z-index: 2;
+    transition: all 0.2s 0.7s;
+}
+
+#welcome-screen-email[data-mode="signup"] #welcome-screen-email-teaser-signup .ws-email-teaser-inner {
+    transform: translateX(-800px);
+    transition-delay: 0s;
+}
+
+#welcome-screen-email[data-mode="signup"] #welcome-screen-email-teaser-login .ws-email-teaser-inner {
+    transform: translateX(0%);
+    transition-delay: 0.6s;
+}
+
+#welcome-screen-email[data-mode="signup"] #welcome-screen-email-teaser-signup {
+    pointer-events: none;
+}
+
+#welcome-screen-email[data-mode="signup"] #welcome-screen-email-teaser-login {
+    pointer-events: all;
+}
+
+/* ================================================================
+   GUEST SIGNUP  →  #welcome-screen-guest-signup
+================================================================= */
+#welcome-screen-guest-signup .ws-card {
+    max-width: 520px;
+}
+#welcome-screen-guest-signup-disclaimer-text {
+    font-size: var(--ws-font-small);
+    color: var(--ws-text-dim);
+    opacity: 0.75;
+    margin: 0;
+    line-height: 1.4;
+}
+#welcome-screen-guest-signup-back-button {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: 'lilita-one';
+    font-size: var(--ws-font-small);
+    color: var(--ws-cyan-bright);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+    margin-top: -0.2rem;
+}
+#welcome-screen-guest-signup-back-button:hover { color: #ffffff; }
+
+#welcome-screen-guest-signup-username-title {
+    font-size: var(--ws-font-small);
+    color: var(--ws-text-dim);
+    opacity: 0.75;
+    margin: clamp(0.4rem, 1vmin, 0.7rem) 0 0;
+    font-family: 'lilita-one';
+}
+#welcome-screen-guest-signup-username {
+    font-family: 'lilita-one-bold';
+    font-size: clamp(1.2rem, 2.8vmin, 1.6rem);
+    color: var(--ws-cyan-bright);
+    margin: 0;
+    text-shadow: 0 0 0.2em rgba(10, 204, 238, 0.5);
+}
+
+/* ================================================================
+   DISCLAIMER (ToS accept)  →  #welcome-screen-disclaimer
+================================================================= */
+#welcome-screen-disclaimer .ws-card {
+    max-width: 560px;
+}
+#welcome-screen-disclaimer-subtitle {
+    font-family: 'lilita-one';
+    font-size: var(--ws-font-subtitle);
+    color: var(--ws-text-dim);
+    opacity: 0.9;
+    margin: 0;
+}
+#welcome-screen-disclaimer-txt {
+    font-size: var(--ws-font-body);
+    color: var(--ws-text-dim);
+    line-height: 1.5;
+    margin: 0;
+}
+#welcome-screen-terms-link,
+#welcome-screen-privacy-link,
+#welcome-screen-cookies-link-text {
+    color: var(--ws-cyan-bright);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+#welcome-screen-terms-link:hover,
+#welcome-screen-privacy-link:hover,
+#welcome-screen-cookies-link-text:hover {
+    color: #ffffff;
+}
+
+.ws-checkbox-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    text-align: left;
+    margin-top: 0.2rem;
+}
+#welcome-screen-disclaimer-accept {
+    appearance: none;
+    -webkit-appearance: none;
+    width: clamp(22px, 3.4vmin, 26px);
+    height: clamp(22px, 3.4vmin, 26px);
+    flex-shrink: 0;
+    margin: 0;
+    border-radius: 6px;
+    border: 1px solid rgba(10, 204, 238, 0.45);
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+#welcome-screen-disclaimer-accept:checked {
+    background: linear-gradient(to right, var(--ws-cyan), var(--ws-cyan-bright));
+    border-color: var(--ws-cyan-bright);
+}
+#welcome-screen-disclaimer-accept:checked::after {
+    content: "";
+    position: absolute;
+    left: 33%;
+    top: 15%;
+    width: 26%;
+    height: 55%;
+    border-right: 2.5px solid #08182a;
+    border-bottom: 2.5px solid #08182a;
+    transform: rotate(40deg);
+}
+#welcome-screen-disclaimer label[for="welcome-screen-disclaimer-accept"] {
+    font-size: var(--ws-font-small);
+    color: var(--ws-text-dim);
+    line-height: 1.4;
+    cursor: pointer;
+    font-family: 'lilita-one';
+}
+
+#welcome-screen-disclaimer-button:disabled {
+    filter: grayscale(0.6) brightness(0.7);
+}
+
+/* ================================================================
+   WELCOME BACK  →  #welcome-screen-welcome-back
+================================================================= */
+#welcome-screen-welcome-back .ws-card {
+    max-width: 520px;
+}
+#welcome-screen-welcome-back-title {
+    font-size: clamp(1.5rem, 3.6vmin, 2.2rem);
+    white-space: normal;
+}
+
+/* ================================================================
+   COOKIES — full-screen gate overlay (privacy deserves full
+   attention, not a small corner toast per feedback).
+================================================================= */
+#welcome-screen-cookies {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 4vw, 2rem);
+    background: rgba(5, 13, 24, 0.72);
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+#welcome-screen-cookies.ws-active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.ws-cookies-card {
+    width: 100%;
+    max-width: 520px;
+    box-sizing: border-box;
+    padding: var(--ws-card-pad);
+    background: linear-gradient(180deg, var(--ws-panel-top) 0%, var(--ws-panel-bottom) 100%);
+    border: 1px solid rgba(10, 204, 238, 0.4);
+    border-radius: var(--ws-radius-lg);
+    box-shadow:
+        0 14px 48px rgba(0, 0, 0, 0.55),
+        0 0 34px rgba(10, 204, 238, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: clamp(0.55rem, 1.2vmin, 0.85rem);
+    transform: scale(0.94) translateY(8px);
+    transition: transform 0.35s cubic-bezier(.22,.61,.36,1);
+}
+#welcome-screen-cookies.ws-active .ws-cookies-card {
+    transform: scale(1) translateY(0);
+}
+#welcome-screen-cookies-title {
+    font-family: 'lilita-one-bold';
+    font-size: clamp(1.3rem, 2.8vmin, 1.7rem);
+    color: var(--ws-text);
+    margin: 0;
+    text-shadow: 0 0 0.04em #000, 0 0 0.15em rgba(0,0,0,0.5);
+}
+#welcome-screen-cookies-text,
+#welcome-screen-cookies-link {
+    font-size: var(--ws-font-body);
+    color: var(--ws-text-dim);
+    line-height: 1.45;
+    margin: 0;
+    font-family: 'lilita-one';
+}
+.ws-cookies-buttons {
+    width: 100%;
+    display: flex;
+    gap: clamp(0.6rem, 1.4vmin, 0.9rem);
+    margin-top: clamp(0.3rem, 0.8vmin, 0.5rem);
+}
+#welcome-screen-cookies-button,
+#welcome-screen-cookies-decline-button {
+    flex: 1;
+    padding: clamp(0.65rem, 1.5vmin, 0.85rem) clamp(0.9rem, 2vmin, 1.2rem);
+    font-family: 'lilita-one-bold';
+    font-size: var(--ws-font-body);
+    border-radius: var(--ws-radius-pill);
+    cursor: pointer;
+    border: 1px solid rgba(10, 204, 238, 0.4);
+    transition: transform 0.12s ease, filter 0.12s ease, background 0.15s ease;
+}
+#welcome-screen-cookies-button {
+    color: #08182a;
+    background: linear-gradient(to right, var(--ws-cyan), var(--ws-cyan-bright));
+    border: none;
+    box-shadow: 0 0 0.8em rgba(10, 204, 238, 0.4);
+}
+#welcome-screen-cookies-button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+#welcome-screen-cookies-decline-button {
+    color: var(--ws-text-dim);
+    background: transparent;
+}
+#welcome-screen-cookies-decline-button:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+}
+
+/* ================================================================
+   POLICY POPUP — scrollable overlay for Terms/Privacy/Cookie policy
+================================================================= */
+.ws-policy-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 120;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 4vw, 2rem);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+.ws-policy-overlay.ws-active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.ws-policy-modal {
+    width: min(640px, 100%);
+    max-height: 82vh;
+    background: linear-gradient(180deg, #14243a 0%, #08182a 100%);
+    border: 1px solid rgba(10, 204, 238, 0.45);
+    border-radius: var(--ws-radius-lg);
+    box-shadow:
+        0 14px 48px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(10, 204, 238, 0.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.94);
+    opacity: 0;
+    transition: transform 0.22s ease, opacity 0.22s ease;
+}
+.ws-policy-overlay.ws-active .ws-policy-modal {
+    transform: scale(1);
+    opacity: 1;
+}
+.ws-policy-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: clamp(1rem, 2.4vmin, 1.4rem) clamp(1.2rem, 2.8vmin, 1.6rem);
+    border-bottom: 1px solid rgba(10, 204, 238, 0.2);
+    flex-shrink: 0;
+}
+.ws-policy-modal-title {
+    font-family: 'lilita-one-bold';
+    font-size: clamp(1.2rem, 2.8vmin, 1.6rem);
+    margin: 0;
+    color: var(--ws-text);
+    text-shadow: 0 0 0.04em #000, 0 0 0.15em rgba(0,0,0,0.5);
+}
+
+/* Close button — fixed inner box so the glyph never shifts when
+   the whole button rotates on hover (previous bug: the icon
+   recentred itself using text layout, which drifted on rotation). */
+.ws-policy-modal-close {
+    width: clamp(32px, 4.6vmin, 38px);
+    height: clamp(32px, 4.6vmin, 38px);
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1px solid rgba(10, 204, 238, 0.35);
+    background: rgba(10, 204, 238, 0.08);
+    color: var(--ws-text);
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    font-size: 0;
+    line-height: 0;
+    vertical-align: middle;
+    position: relative;
+    transform: rotate(0deg);
+    transform-origin: 50% 50%;
+    transition: background 0.15s ease, transform 0.25s ease;
+}
+.ws-policy-modal-close span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'lilita-one';
+    font-size: 1.1rem;
+    line-height: 1;
+    pointer-events: none;
+}
+.ws-policy-modal-close:hover {
+    background: rgba(10, 204, 238, 0.2);
+    transform: rotate(90deg);
+}
+.ws-policy-modal-body {
+    padding: clamp(1.1rem, 2.6vmin, 1.6rem) clamp(1.2rem, 2.8vmin, 1.6rem);
+    overflow-y: auto;
+    font-family: 'lilita-one';
+    font-size: var(--ws-font-body);
+    color: var(--ws-text-dim);
+    line-height: 1.6;
+    text-align: left;
+}
+.ws-policy-modal-body p { margin: 0 0 1em; }
+.ws-policy-modal-body h4 {
+    font-family: 'lilita-one-bold';
+    color: #ffffff;
+    margin: 1.2em 0 0.4em;
+    font-size: clamp(0.95rem, 2vmin, 1.15rem);
+}
+.ws-policy-modal-body::-webkit-scrollbar,
+.ws-email-layer::-webkit-scrollbar {
+    width: 8px;
+}
+.ws-policy-modal-body::-webkit-scrollbar-thumb,
+.ws-email-layer::-webkit-scrollbar-thumb {
+    background: rgba(10, 204, 238, 0.35);
+    border-radius: 999px;
+}
+.ws-policy-modal-body::-webkit-scrollbar-track,
+.ws-email-layer::-webkit-scrollbar-track { background: transparent; }
+
+/* ================================================================
+   REDUCED MOTION
+================================================================= */
+@media (prefers-reduced-motion: reduce) {
+    .ws-step,
+    #welcome-screen-cookies,
+    .ws-cookies-card,
+    .ws-policy-overlay,
+    .ws-policy-modal,
+    .ws-email-layer,
+    .ws-email-teaser,
+    .welcome-screen-login-option,
+    #welcome-screen-guest-button,
+    #welcome-screen-email-login-button,
+    #welcome-screen-email-signup-button,
+    #welcome-screen-guest-signup-continue-button,
+    #welcome-screen-disclaimer-button,
+    #welcome-screen-welcome-back-button {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
     }
+}
+
+/* ================================================================
+   SMALL SCREENS
+================================================================= */
+@media (max-width: 480px) {
+    #welcome-screen-login-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Direct port of Gemini's vertical/mobile layout for the sliding
+   e-mail card — same breakpoint (870px) and same values, since this
+   layout was specifically tuned for that switch-over point. */
+@media (max-width: 870px) {
+    #welcome-screen-email {
+        width: 100vw;
+        height: 100vh;
+        min-height: 650px;
+        border-radius: 0;
+        max-width: none;
+    }
+
+    #welcome-screen-email-forms {
+        width: 100%;
+        top: 95%;
+        transform: translate(-50%, -100%);
+        left: 50%;
+        transition: 1s 0.8s ease-in-out;
+    }
+
+    .ws-email-layer {
+        padding: 0 1.5rem;
+    }
+
+    .ws-email-panels {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 2fr 1fr;
+    }
+
+    .ws-email-teaser {
+        flex-direction: column;
+        justify-content: space-around;
+        padding: 2.5rem 8%;
+        grid-column: 1 / 2;
+    }
+
+    #welcome-screen-email-teaser-login {
+        grid-row: 3 / 4;
+    }
+
+    #welcome-screen-email-teaser-signup {
+        grid-row: 1 / 2;
+    }
+
+    .ws-email-teaser-inner {
+        transition: transform 0.9s ease-in-out;
+        transition-delay: 0.8s;
+    }
+
+    .ws-email-teaser h3 {
+        font-size: clamp(1.2rem, 4.5vw, 1.5rem);
+    }
+
+    .ws-email-teaser p {
+        font-size: clamp(0.78rem, 3.4vw, 0.85rem);
+        padding: 0.5rem 0;
+    }
+
+    .ws-email-teaser-button {
+        width: 110px;
+        height: 35px;
+        font-size: 0.7rem;
+    }
+
+    #welcome-screen-email::before {
+        width: 1500px;
+        height: 1500px;
+        transform: translateX(-50%);
+        left: 30%;
+        bottom: 68%;
+        right: initial;
+        top: initial;
+        transition: 2s ease-in-out;
+    }
+
+    #welcome-screen-email-teaser-signup .ws-email-teaser-inner {
+        transform: translateY(0px);
+    }
+
+    #welcome-screen-email-teaser-signup {
+        align-items: center;
+        justify-content: space-around;
+        padding: 2.5rem 8%;
+        text-align: center;
+    }
+
+    #welcome-screen-email-teaser-signup .ws-email-teaser-inner {
+        align-items: center;
+    }
+
+    #welcome-screen-email-teaser-login {
+        align-items: center;
+        justify-content: space-around;
+        padding: 2.5rem 8%;
+        text-align: center;
+    }
+
+    #welcome-screen-email-teaser-login .ws-email-teaser-inner {
+        align-items: center;
+    }
+
+    #welcome-screen-email-teaser-login .ws-email-teaser-inner {
+        transform: translateY(300px);
+    }
+
+    /* ANIMATION MOBILE STATES */
+    #welcome-screen-email[data-mode="signup"]::before {
+        transform: translate(-50%, 100%);
+        bottom: 32%;
+        right: initial;
+    }
+
+    #welcome-screen-email[data-mode="signup"] #welcome-screen-email-teaser-signup .ws-email-teaser-inner {
+        transform: translateY(-300px);
+    }
+
+    #welcome-screen-email[data-mode="signup"] #welcome-screen-email-teaser-login .ws-email-teaser-inner {
+        transform: translateY(0px);
+    }
+
+    #welcome-screen-email[data-mode="signup"] #welcome-screen-email-forms {
+        top: 5%;
+        transform: translate(-50%, 0);
+        left: 50%;
+    }
+}

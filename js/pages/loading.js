@@ -61,6 +61,34 @@ Router.register('loading', (() => {
 			_running = true;
 
 			const loading_screen = document.getElementById('loading-screen');
+			const title = document.getElementById('loading-screen-title');
+			const states = ['', '.', '..', '...', '..', '.'];
+			let idx = 0;
+
+			_titleInterval = setInterval(() => {
+				if (title) title.textContent = 'Loading' + states[idx];
+				idx = (idx + 1) % states.length;
+
+				if (loading_screen && loading_screen.style.display === 'none') {
+					clearInterval(_titleInterval);
+					_titleInterval = null;
+					if (title) title.textContent = 'Loading';
+					_running = false;
+				}
+			}, 400);
+
+			edit_loading_detail('Fetching game version...');
+			set_loading_bar(1);
+			edit_loading_percentage(1);
+
+			// Print game version in console
+			const { fetchGameVersion } = await import('/js/data/cache.js');
+			try {
+				const gameVersion = await fetchGameVersion();
+				console.log(`GAME | Game Version = ${gameVersion}`);
+			} catch (err) {
+				console.error('loading: failed to fetch game_version', err);
+			}
 
 			// Notification block (may short-circuit the rest)
 			try {
@@ -81,6 +109,10 @@ Router.register('loading', (() => {
 					}
 					notif.hidden = false;
 					document.body.classList.add('has-notification');
+					if (_titleInterval) {
+						clearInterval(_titleInterval);
+						_titleInterval = null;
+					}
 					_running = false;
 					return;
 				} else if (notif) {
@@ -91,29 +123,13 @@ Router.register('loading', (() => {
 				console.error('loading: failed to load notification data', err);
 			}
 
-			const title = document.getElementById('loading-screen-title');
-			const states = ['', '.', '..', '...', '..', '.'];
-			let idx = 0;
-
-			_titleInterval = setInterval(() => {
-				if (title) title.textContent = 'Loading' + states[idx];
-				idx = (idx + 1) % states.length;
-
-				if (loading_screen && loading_screen.style.display === 'none') {
-					clearInterval(_titleInterval);
-					_titleInterval = null;
-					if (title) title.textContent = 'Loading';
-					_running = false;
-				}
-			}, 400);
-
 			edit_loading_detail('Initializing...');
 			set_loading_bar(2);
 			edit_loading_percentage(2);
 
 			// --- Real asset sync ---
 			// syncAssets() already retries internally (see cache.js
-			// MAX_ATTEMPTS) and logs to Supabase on final failure.
+			// MAX_ATTEMPTS) and logs to Turso on final failure.
 			// Here we just react to the result.
 			let syncResult;
 			try {

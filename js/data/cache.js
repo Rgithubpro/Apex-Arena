@@ -2,9 +2,9 @@
  * Apex Arena — Asset Cache Engine
  * ---------------------------------
  * Responsible for:
- *   1. Reading the current game_version value from Supabase
+ *   1. Reading the current game_version value from the middleware server
  *      (general-data table, row where name = "game_version") via
- *      the shared js/data/supabase.js client
+ *      the shared js/data/middleware.js client
  *   2. Fetching manifest.json for that version from jsDelivr
  *      (jsDelivr URL uses the version as the @tag, e.g. @1.0.0)
  *   3. Diffing against what's cached: bundles are compared by the
@@ -27,7 +27,7 @@
  *      needed.
  *   6. On repeated failure: retries once, then surfaces a
  *      user-facing notice, then logs full diagnostic detail to the
- *      Supabase `logs` table (public insert-only table).
+ *      middleware server's `logs` table (public write-only table).
  *
  * Usage from your loading script (works identically in dev and prod —
  * dev mode just has nothing to pre-sync, see syncAssets below):
@@ -53,7 +53,7 @@
 // CONFIG
 // ─────────────────────────────────────────────────────────────
 
-import { supabaseSelect, supabaseInsert } from './supabase.js';
+import { middlewareGet, middlewareWrite } from './middleware.js';
 
 const CACHE_NAME = 'apex-arena-assets-v1';
 const MANIFEST_CACHE_KEY = 'https://cache.local/__manifest__'; // synthetic key, never fetched over network
@@ -64,16 +64,16 @@ function jsdelivrBase(version) {
   return `https://cdn.jsdelivr.net/gh/${JSDELIVR_REPO}@${version}/`;
 }
 
-// Supabase table names used by this module (connection details live
-// in js/data/supabase.js — this file only knows which tables it needs).
+// Table names used by this module (connection details live in
+// js/data/middleware.js — this file only knows which tables it needs).
 const GENERAL_DATA_TABLE = 'general-data';
 const LOGS_TABLE = 'logs';
 
-const REPORT_URL = 'https://github.com/Rgithubpro/apex-arena'; // shown to the player in the failure notice
+const REPORT_URL = 'https://github.com/Rgithubpro/Apex-Arena/issues'; // shown to the player in the failure notice
 
 // Dev mode: auto-detected from hostname. Bypasses the Cache API
 // entirely and fetches straight from the sibling assets folder.
-const IS_DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
+export const IS_DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
 
 // IMPORTANT: this can't be a relative path like '../apex-arena-assets/'.
 // Live Server serves apex-arena-client/'s CONTENTS as the web root
@@ -93,17 +93,17 @@ const FFLATE_CDN = 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js';
 const MAX_ATTEMPTS = 2; // 1 initial + 1 retry, per your "try again, then notify" flow
 
 // ─────────────────────────────────────────────────────────────
-// Supabase: version lookup
+// Middleware: version lookup
 // ─────────────────────────────────────────────────────────────
 
-async function fetchGameVersion() {
-  const rows = await supabaseSelect(GENERAL_DATA_TABLE, 'select=value&name=eq.game_version&limit=1');
-  if (!rows.length || !rows[0].value) throw new Error('Supabase general-data has no game_version row');
-  return rows[0].value; // e.g. "1.0.0"
+export async function fetchGameVersion() {
+  const row = await middlewareGet(GENERAL_DATA_TABLE, 'game_version');
+  if (!row || !row.value) throw new Error('general-data has no game_version row');
+  return row.value; // e.g. "1.0.0"
 }
 
 // ─────────────────────────────────────────────────────────────
-// Supabase: logging
+// Middleware: logging
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -111,7 +111,7 @@ async function fetchGameVersion() {
  * client-side, into the public `logs` table. Never throws — a
  * failure to log should never crash the loading flow further.
  */
-async function logToSupabase(event, extra = {}) {
+async function logToMiddleware(event, extra = {}) {
   try {
     let connection = null;
     if (navigator.connection) {
@@ -143,9 +143,9 @@ async function logToSupabase(event, extra = {}) {
       ...extra,
     };
 
-    await supabaseInsert(LOGS_TABLE, { data: payload });
+    await middlewareWrite(LOGS_TABLE, payload);
   } catch (err) {
-    console.error('cache: failed to write log to Supabase (non-fatal)', err);
+    console.error('cache: failed to write log to middleware (non-fatal)', err);
   }
 }
 
@@ -440,9 +440,10 @@ async function attemptSync(report) {
  * Runs the full sync with retry + failure-reporting built in:
  *   1. Try once.
  *   2. On failure, try once more.
- *   3. On second failure: log full diagnostics to Supabase and
- *      return { status: 'failed', error, reportUrl } so the caller
- *      can show a "please reload, or report this on GitHub" notice.
+ *   3. On second failure: log full diagnostics to the middleware
+ *      server and return { status: 'failed', error, reportUrl } so
+ *      the caller can show a "please reload, or report this on
+ *      GitHub" notice.
  */
 export async function syncAssets({ onProgress } = {}) {
   const report = (pct, detail) => onProgress && onProgress(pct, detail);
@@ -473,7 +474,7 @@ export async function syncAssets({ onProgress } = {}) {
   }
 
   // All attempts failed — log full diagnostics, surface a failure result.
-  await logToSupabase('asset_sync_failed', {
+  await logToMiddleware('asset_sync_failed', {
     error: {
       message: lastError?.message,
       stack: lastError?.stack,

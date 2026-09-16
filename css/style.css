@@ -1,9 +1,12 @@
 /* ================================================================
     IMPORT OTHER CSS FILES
 ================================================================ */
+/* PAGES */
 @import "pages/loading.css";
 @import "pages/welcome.css";
 @import "pages/home.css";
+/* OTHER STYLESHEETS */
+@import "notification.css";
 
 /* ROOT */
 :root {
