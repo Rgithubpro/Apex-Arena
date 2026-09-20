@@ -11,19 +11,23 @@
 </head>
 <body>
 <!-- ================================================================
-  SCRIPTS  →  IMPORT SCRIPTS 
+  CORE SCRIPTS
+  Everything here MUST ship with the client itself — it's what
+  bootstraps and fetches everything else. Nothing else lives here
+  anymore: welcome/home (and every future page)'s HTML, CSS, and JS
+  now live in the assets repo and are injected by cache.js's
+  applyStyles()/applyHTML()/applyScripts(), called from loading.js
+  once syncAssets() succeeds. See engineering notes for the full
+  core-vs-assets boundary.
 ================================================================= -->
     <script src="js/router.js"></script>
-    <!-- Pages -->
     <script src="js/pages/loading.js"></script>
-    <script src="js/pages/welcome.js"></script>
-    <script src="js/pages/home.js"></script>
-
-    <!-- Helper Scripts -->
     <script src="js/notification.js"></script>
-  
+
 <!-- ================================================================
     NOTIFICATIONS  →  Toast + Modal (global, works on any page)
+    Core: loading.js itself depends on this for failure reporting,
+    before any page has loaded.
 ================================================================= -->
     <div id="notification-toast" class="notification-toast" hidden>
         <p id="notification-toast-text"></p>
@@ -40,6 +44,11 @@
     <div class="page-container">
 <!-- ================================================================
   LOADING  →  #loading
+  Core: this is the ONLY page whose markup stays in index.html — it
+  has to be visible before a single asset has been fetched, or the
+  player sees an empty white screen while cache.js is still working.
+  Every other page gets appended into .page-container below this one,
+  at runtime, by applyHTML().
 ================================================================= -->
         <div id="loading-screen" class="page">
             <img data-asset="assets/backgrounds/loading.png" src="assets/backgrounds/loading.png" alt="" id="loading-screen-image">
@@ -61,381 +70,8 @@
                 <img alt="" id="loading-screen-notification-img">
             </div>
         </div>
-<!-- ================================================================
-WELCOME  →  #welcome
-================================================================ -->
-        <div id="welcome-screen" class="page">
-            <canvas id="networkCanvas"></canvas>
-
-            <!-- All step cards + popups for this page live inside this screen,
-                never appended to <body>, so everything nests under
-                .page-container > #welcome-screen as requested. -->
-
-            <div id="welcome-screen-log-in" class="ws-step ws-active">
-                <div class="ws-card">
-                    <h1 id="welcome-screen-title" class="ws-card-title">Welcome to Apex-Arena</h1>
-                    <h4 id="welcome-screen-subtitle" class="ws-card-subtitle">Choose how to log in</h4>
-                    <p id="welcome-screen-subsubtitle" class="ws-card-subsubtitle">This way your data can be saved and accessed across devices</p>
-                    <div id="welcome-screen-login-options">
-                        <button class="welcome-screen-login-option" id="welcome-screen-login-option-google">
-                            <img data-asset="assets/logos/logo-google.png" alt="Google logo" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-google">
-                            <p id="welcome-screen-login-option-text-google">Continue with Google</p>
-                        </button>
-                        <button class="welcome-screen-login-option" id="welcome-screen-login-option-microsoft">
-                            <img data-asset="assets/logos/logo-microsoft.png" alt="Microsoft logo" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-microsoft">
-                            <p id="welcome-screen-login-option-text-microsoft">Continue with Microsoft</p>
-                        </button>
-                        <button class="welcome-screen-login-option" id="welcome-screen-login-option-apple">
-                            <img data-asset="assets/logos/logo-apple.png" alt="Apple logo" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-apple">
-                            <p id="welcome-screen-login-option-text-apple">Continue with Apple</p>
-                        </button>
-                        <button class="welcome-screen-login-option" id="welcome-screen-login-option-email">
-                            <img data-asset="assets/logos/logo-mail.png" alt="E-mail" class="welcome-screen-login-option-icon" id="welcome-screen-login-option-icon-email">
-                            <p id="welcome-screen-login-option-text-email">Continue with E-mail</p>
-                        </button>
-                    </div>
-                    <button id="welcome-screen-guest-button">
-                        <img data-asset="assets/logos/logo-guests.png" alt="Guest logo" id="welcome-screen-guest-button-icon">
-                        <span id="welcome-screen-guest-button-copy">
-                            <p id="welcome-screen-guest-button-text">Or continue as Guest</p>
-                            <p id="welcome-screen-guest-button-subtext">You can only play on this device.</p>
-                        </span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Service "continuing to login" placeholder step -->
-            <div id="welcome-screen-service" class="ws-step">
-                <button type="button" class="ws-back-button" id="welcome-screen-service-back" aria-label="Go back">←</button>
-                <div class="ws-card">
-                    <div class="ws-service-spinner" aria-hidden="true"></div>
-                    <h2 class="ws-card-title" id="welcome-screen-service-title">Connecting…</h2>
-                    <p class="ws-card-subtitle" id="welcome-screen-service-subtitle">Continuing with your account</p>
-                </div>
-            </div>
-
-            <!--E-mail log-in / sign up — sliding card with a circular reveal
-                (form track + circle both animate via transform/opacity,
-                which browsers can animate smoothly with no start-up stall)-->
-            <div id="welcome-screen-email-step" class="ws-step">
-                <button type="button" class="ws-back-button" id="welcome-screen-email-back" aria-label="Go back">←</button>
-                <div id="welcome-screen-email" data-mode="login">
-
-                    <div class="ws-email-panels">
-                        <!-- Teaser shown when login is active: invites sign up -->
-                        <div class="ws-email-teaser" id="welcome-screen-email-teaser-signup">
-                            <div class="ws-email-teaser-inner">
-                                <h3>New here?</h3>
-                                <p>Join Apex Arena today and jump straight into the action — creating an account takes seconds.</p>
-                                <button type="button" class="ws-email-teaser-button" id="welcome-screen-email-teaser-to-signup">Sign Up</button>
-                            </div>
-                        </div>
-
-                        <!-- Teaser shown when signup is active: invites log in -->
-                        <div class="ws-email-teaser" id="welcome-screen-email-teaser-login">
-                            <div class="ws-email-teaser-inner">
-                                <h3>One of us?</h3>
-                                <p>Welcome back! Log in to pick up right where you left off.</p>
-                                <button type="button" class="ws-email-teaser-button" id="welcome-screen-email-teaser-to-login">Log In</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="welcome-screen-email-forms">
-                        <div id="welcome-screen-email-login" class="ws-email-layer">
-                            <h2 id="welcome-screen-email-login-title">Welcome back!</h2>
-                            <h4 id="welcome-screen-email-login-subtitle">Log in with your E-mail address and password</h4>
-                            <form id="welcome-screen-email-login-form">
-                                <div class="ws-input-wrap">
-                                    <input type="email" id="welcome-screen-email-login-email" placeholder="E-mail address" required autocomplete="email">
-                                </div>
-                                <div class="ws-input-wrap">
-                                    <input type="password" id="welcome-screen-email-login-password" placeholder="Password" required autocomplete="current-password">
-                                    <button type="button" id="welcome-screen-email-login-show-password" aria-label="Show password"><img data-asset="assets/icons/general/show-password.png" alt="" id="welcome-screen-email-login-show-password-icon"></button>
-                                </div>
-                                <a href="#forgot-password" id="welcome-screen-email-login-forgot">Forgot password?</a>
-                                <button type="submit" id="welcome-screen-email-login-button">Log In</button>
-                            </form>
-                        </div>
-
-                        <div id="welcome-screen-email-signup" class="ws-email-layer">
-                            <h2 id="welcome-screen-email-signup-title">Join us!</h2>
-                            <h4 id="welcome-screen-email-signup-subtitle">Create an account with an E-mail address and password</h4>
-                            <form id="welcome-screen-email-signup-form">
-                                <div class="ws-input-wrap">
-                                    <input type="text" id="welcome-screen-email-signup-username" placeholder="Username" required autocomplete="username">
-                                </div>
-                                <div class="ws-input-wrap">
-                                    <input type="email" id="welcome-screen-email-signup-email" placeholder="E-mail address" required autocomplete="email">
-                                </div>
-                                <div class="ws-input-wrap">
-                                    <input type="password" id="welcome-screen-email-signup-password" placeholder="Password" required autocomplete="new-password">
-                                    <button type="button" id="welcome-screen-email-signup-show-password" aria-label="Show password"><img data-asset="assets/icons/general/show-password.png" alt="" id="welcome-screen-email-signup-show-password-icon"></button>
-                                </div>
-                                <div class="ws-strength-meter" id="welcome-screen-email-signup-strength-meter">
-                                    <div class="ws-strength-meter-seg"></div><div class="ws-strength-meter-seg"></div><div class="ws-strength-meter-seg"></div><div class="ws-strength-meter-seg"></div>
-                                </div>
-                                <p class="ws-strength-label" id="welcome-screen-email-signup-strength-label"></p>
-                                <div class="ws-input-wrap">
-                                    <input type="password" id="welcome-screen-email-signup-confirm-password" placeholder="Confirm Password" required autocomplete="new-password">
-                                    <button type="button" id="welcome-screen-email-signup-show-password-confirm" aria-label="Show password"><img data-asset="assets/icons/general/show-password.png" alt="" id="welcome-screen-email-signup-show-password-confirm-icon"></button>
-                                </div>
-                                <button type="submit" id="welcome-screen-email-signup-button">Sign Up</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!--Guest mode-->
-            <div id="welcome-screen-guest-signup" class="ws-step">
-                <button type="button" class="ws-back-button" id="welcome-screen-guest-back-arrow" aria-label="Go back">←</button>
-                <div class="ws-card">
-                    <h2 id="welcome-screen-guest-signup-title" class="ws-card-title">Welcome, Guest!</h2>
-                    <h4 id="welcome-screen-guest-signup-subtitle" class="ws-card-subtitle">You are currently playing as a guest. You can only play on this device. Data will be deleted after a certain period of inactivity.</h4>
-                    <p id="welcome-screen-guest-signup-disclaimer-text">To save your progress and access it across devices, you can create an account or log in on the previous page.</p>
-                    <button id="welcome-screen-guest-signup-back-button">Go back to create an account or log in.</button>
-                    <h5 id="welcome-screen-guest-signup-username-title">Your guest username is:</h5>
-                    <p id="welcome-screen-guest-signup-username">Guest462046</p>
-                    <button id="welcome-screen-guest-signup-continue-button">Continue as Guest</button>
-                </div>
-            </div>
-
-            <!-- Disclaimer-->
-            <div id="welcome-screen-disclaimer" class="ws-step">
-                <button type="button" class="ws-back-button" id="welcome-screen-disclaimer-back" aria-label="Go back">←</button>
-                <div class="ws-card">
-                    <h1 id="welcome-screen-disclaimer-title" class="ws-card-title">Welcome to Apex-Arena!</h1>
-                    <h2 id="welcome-screen-disclaimer-subtitle">We hope you have a great time!</h2>
-                    <p id="welcome-screen-disclaimer-txt">But first you have to agree to our <a href="javascript:void(0);" id="welcome-screen-terms-link">Terms of Service</a> and <a href="javascript:void(0);" id="welcome-screen-privacy-link">Privacy Policy</a>.</p>
-                    <div class="ws-checkbox-row">
-                        <input type="checkbox" id="welcome-screen-disclaimer-accept">
-                        <label for="welcome-screen-disclaimer-accept">I agree to the Terms of Service and Privacy Policy</label>
-                    </div>
-                    <button id="welcome-screen-disclaimer-button">Start Playing</button>
-                </div>
-            </div>
-
-            <!--Welcome back player-->
-            <div id="welcome-screen-welcome-back" class="ws-step">
-                <button type="button" class="ws-back-button" id="welcome-screen-welcome-back-back" aria-label="Go back">←</button>
-                <div class="ws-card">
-                    <h1 id="welcome-screen-welcome-back-title" class="ws-card-title">Welcome back, {username}!</h1>
-                    <button id="welcome-screen-welcome-back-button">Continue to Home Screen</button>
-                </div>
-            </div>
-
-            <!-- Cookies — full-screen gate, must be answered before the app is usable -->
-            <div id="welcome-screen-cookies">
-                <div class="ws-cookies-card">
-                    <h5 id="welcome-screen-cookies-title">Cookies</h5>
-                    <p id="welcome-screen-cookies-text">We use cookies to improve your experience. By clicking "Accept Cookies", you agree to our use of cookies.</p>
-                    <p id="welcome-screen-cookies-link">Learn more about our <a href="javascript:void(0);" id="welcome-screen-cookies-link-text">Cookie Policy</a>.</p>
-                    <div class="ws-cookies-buttons">
-                        <button id="welcome-screen-cookies-button">Accept Cookies</button>
-                        <button id="welcome-screen-cookies-decline-button">Use only necessary cookies</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Policy popup (ToS / Privacy / Cookies) — static shell, JS only
-                swaps the title/body text and toggles ws-active -->
-            <div class="ws-policy-overlay" id="welcome-screen-policy-overlay">
-                <div class="ws-policy-modal" role="dialog" aria-modal="true">
-                    <div class="ws-policy-modal-header">
-                        <h3 class="ws-policy-modal-title" id="welcome-screen-policy-title"></h3>
-                        <button class="ws-policy-modal-close" id="welcome-screen-policy-close" aria-label="Close" type="button"><span>&times;</span></button>
-                    </div>
-                    <div class="ws-policy-modal-body" id="welcome-screen-policy-body"></div>
-                </div>
-            </div>
-        </div>
-<!-- ================================================================
-HOME  →  #home
-================================================================= -->
-        <div id="home-screen" class="page">
-            <img data-asset="assets/backgrounds/background.png" alt="Home screen background" id="home-screen-background">
-            <!-- Top -->
-            <div id="home-screen-top">
-                <button id="home-screen-profile">
-                    <img data-asset="assets/icons/profile-pictures/abstract-002.svg" alt="Profile picture" id="home-screen-profile-picture">
-                    <p id="home-screen-profile-username">{username}</p>
-                </button>
-                <button id="home-screen-trophieroad">
-                    <div id="home-screen-trophieroad-count-box">
-                        <p id="home-screen-trophieroad-count">91021</p>
-                        <img data-asset="assets/icons/general/trophy.png" alt="" id="home-screen-trophieroad-count-trophie">
-                    </div>
-                    <div id="home-screen-trophieroad-progressbar">
-                        <div id="home-screen-trophieroad-progressbar-fill"></div>
-                    </div>
-                    <img data-asset="assets/icons/general/coins.png" alt="Next reward = {reward}" id="home-screen-trophieroad-next-reward">
-                    <img data-asset="assets/icons/ranks/trophyroad/rank5.png" alt="Rank: {rank}" id="home-screen-trophieroad-rank">
-                    <div id="home-screen-trophieroad-rank-substage">
-                        <p id="home-screen-trophieroad-rank-substage-text">III</p>
-                    </div>
-                </button>
-                <div id="home-screen-currencies">
-                    <button id="home-screen-currencies-gems">
-                        <p id="home-screen-currencies-gems-count">134</p>
-                        <img data-asset="assets/icons/general/gems.png" alt="Gems" id="home-screen-currencies-gems-icon">
-                    </button>
-                    <button id="home-screen-currencies-coins">
-                        <p id="home-screen-currencies-coins-count">5291</p>
-                        <img data-asset="assets/icons/general/coins.png" alt="Coins" id="home-screen-currencies-coins-icon">
-                    </button>
-                    <button id="home-screen-currencies-powerpoints">
-                        <p id="home-screen-currencies-powerpoints-count">9821</p>
-                        <img data-asset="assets/icons/general/powerpoints.png" alt="Powerpoints" id="home-screen-currencies-powerpoints-icon">
-                    </button>
-                    <button id="home-screen-currencies-crystals">
-                        <p id="home-screen-currencies-crystals-count">29512</p>
-                        <img data-asset="assets/icons/general/crystals.png" alt="Crystals" id="home-screen-currencies-crystals-icon">
-                    </button>
-                </div>
-                <button id="home-screen-settings">
-                    <img data-asset="assets/icons/general/settings.png" alt="" id="home-screen-settings-icon">
-                </button>
-            </div>
-            <!-- Left side -->
-            <div id="home-screen-left">
-                <button id="home-screen-shop">
-                    <img data-asset="assets/icons/general/shop.png" alt="" id="home-screen-shop-icon">
-                    <p id="home-screen-shop-text">Shop</p>
-                    <div id="home-screen-shop-flag">
-                        <p id="home-screen-shop-flag-text">Free</p>
-                    </div>
-                </button>
-                <button id="home-screen-battlers">
-                    <img data-asset="assets/icons/general/battlers.png" alt="" id="home-screen-battlers-icon">
-                    <p id="home-screen-battlers-text">Battlers</p>
-                    <div id="home-screen-battlers-notification">
-                        <p id="home-screen-battlers-notification-text">20</p>
-                    </div>
-                </button>
-                <button id="home-screen-unlock-brawler">
-                    <img data-asset="assets/icons/general/placeholder.png" alt="" id="home-screen-unlock-brawler-icon">
-                    <div id="home-screen-unlock-brawler-bar">
-                        <div id="home-screen-unlock-brawler-bar-fill"></div>
-                        <p id="home-screen-unlock-brawler-text">1810/3800</p>
-                    </div>
-                </button>
-            </div>
-            <!-- Right side -->
-            <div id="home-screen-right">
-                <button id="home-screen-news">
-                    <img data-asset="assets/icons/general/news.png" alt="" id="home-screen-news-icon">
-                    <p id="home-screen-news-text">News</p>
-                    <div id="home-screen-news-flag">
-                        <p id="home-screen-news-flag-text">New</p>
-                    </div>
-                </button>
-                <button id="home-screen-friends">
-                    <img data-asset="assets/icons/general/friends.png" alt="" id="home-screen-friends-icon">
-                    <p id="home-screen-friends-text">Friends</p>
-                    <div id="home-screen-friends-notification">
-                        <p id="home-screen-friends-notification-text">5</p>
-                    </div>
-                </button>
-                <button id="home-screen-club">
-                    <img data-asset="assets/icons/general/club-white.png" alt="" id="home-screen-club-icon">
-                    <p id="home-screen-club-text">Clubs</p>
-                    <div id="home-screen-club-notification">
-                        <p id="home-screen-club-notification-text">2</p>
-                    </div>
-                </button>
-                <button id="home-screen-team/chat">
-                    <img data-asset="assets/icons/general/teamup.png" alt="" id="home-screen-team-chat-icon"> <!-- can change to chat icon-->
-                    <p id="home-screen-team/chat-text">Team up!</p> <!-- can change to Chat-->
-                </button>
-            </div>
-            <!-- Center -->
-            <div id="home-screen-center">
-                <div id="home-screen-battler-trophies"> <!-- no button cause you can't click on it -->
-                    <img data-asset="assets/icons/ranks/battler/rank4.png" alt="" id="home-screen-battler-trophies-rank-icon">
-                    <p id="home-screen-battler-trophies-rank-text">II</p>
-                    <div id="home-screen-battler-trophies-progressbar">
-                        <div id="home-screen-battler-trophies-progressbar-fill"></div>
-                        <p id="home-screen-battler-trophies-progressbar-text">920</p>
-                        <img data-asset="assets/icons/general/trophy.png" alt="" id="home-screen-battler-trophies-progressbar-trophie">
-                    </div>
-                </div>
-                <button id="home-screen-battler-power-level">
-                    <img data-asset="assets/icons/general/power-flame.png" alt="" id="home-screen-battler-power-level-ultra-icon">
-                    <p id="home-screen-battler-power-level-text">9</p>
-                </button>
-                <button id="home-screen-battler-upgrades">
-                    <img data-asset="assets/icons/general/placeholder.png" alt="" id="home-screen-battler-upgrades-gear1">
-                    <img data-asset="assets/icons/general/placeholder.png" alt="" id="home-screen-battler-upgrades-gear2">
-                    <img data-asset="assets/icons/general/placeholder.png" alt="" id="home-screen-battler-upgrades-gadget">
-                    <img data-asset="assets/icons/general/placeholder.png" alt="" id="home-screen-battler-upgrades-starpower">
-                </button>
-                <button id="home-screen-battler-skins">
-                    <img data-asset="assets/icons/general/hanger.png" alt="" id="home-screen-battler-skins-icon">
-                </button>
-                <div id="home-screen-battler-render">
-                        <canvas id="home-screen-battler-render-canvas"></canvas>
-                </div>
-            </div>
-            <!-- Bottom-->
-            <div id="home-screen-bottom">
-                <button id="home-screen-battlepass">
-                    <img data-asset="assets/icons/general/battlepass-normal.png" alt="" id="home-screen-battlepass-icon">
-                    <div id="home-screen-battlepass-progressbar">
-                        <div id="home-screen-battlepass-progressbar-fill"></div>
-                        <p id="home-screen-battlepass-progressbar-text">421/950</p>
-                    </div>
-                        <img data-asset="assets/icons/general/battler-xp.png" alt="" id="home-screen-battlepass-progressbar-icon">
-                        <img data-asset="assets/icons/general/stardrop.png" alt="Next reward = {reward}" id="home-screen-battlepass-next-reward">
-                </button>
-                <button id="home-screen-quests">
-                    <img data-asset="assets/icons/general/quests.png" alt="" id="home-screen-quests-icon">
-                    <p id="home-screen-quests-text">Quests</p>
-                    <div id="home-screen-quests-flag">
-                        <p id="home-screen-quests-flag-text">New</p>
-                    </div>
-                </button>
-                <button id="home-screen-streak">
-                    <img data-asset="assets/icons/general/flame1.png" alt="" id="home-screen-streak-icon">
-                    <p id="home-screen-streak-text">5</p>
-                </button>
-                <button id="home-screen-event">
-                    <p id="home-screen-event-new-event-in">New event in: 2h 30m</p>
-                    <img data-asset="assets/icons/general/info.png" alt="" id="home-screen-event-info">
-                    <div id="home-screen-event-box">
-                        <h6 id="home-screen-event-box-gamemode">Football</h6>
-                        <p id="home-screen-event-box-map-name">Beach</p>
-                        <img data-asset="assets/maps/football.png" alt="" id="home-screen-event-box-mode-image">
-                        <div id="home-screen-event-new">
-                            <p id="home-screen-event-new-text">NEW EVENTS!</p>
-                        </div>
-                    </div>
-                </button>
-                <button id="home-screen-play">
-                    <div id="home-screen-play-rewards-bar">
-                        <div id="home-screen-play-rewards-bar-fill"></div>
-                        <!-- for now 6 seperate divs, try to make it dynamic -->
-                        <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment1"></div>
-                        <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment2"></div>
-                        <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment3"></div>
-                        <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment4"></div>
-                        <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment5"></div>
-                        <div class="home-screen-play-rewards-bar-segment" id="home-screen-play-rewards-bar-segment6"></div>
-                        <p id="home-screen-play-rewards-bar-next-text">Next rewards 5h 23m</p>
-                        <img data-asset="assets/icons/general/clock.png" id="home-screen-play-rewards-bar-next-icon">
-                    </div>
-                        <img data-asset="assets/icons/general/stardrop.png" id="home-screen-play-reward1">
-                        <img data-asset="assets/icons/general/stardrop.png" id="home-screen-play-reward2">
-                        <img data-asset="assets/icons/general/stardrop.png" id="home-screen-play-reward3">
-                        <img data-asset="assets/icons/general/stardrop.png" id="home-screen-play-reward4">
-                        <img data-asset="assets/icons/general/stardrop.png" id="home-screen-play-reward5">
-                        <img data-asset="assets/icons/general/stardrop.png" id="home-screen-play-reward6">
-                    <div id="home-screen-play-button">
-                        <h2 id="home-screen-play-button-text">Play</h2>
-                    </div>
-                </button>
-            </div>
-        </div>
+        <!-- welcome-screen, home-screen, and every future page get
+             appended here at runtime by cache.js's applyHTML() -->
     </div>
 </body>
 </html>

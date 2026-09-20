@@ -1,11 +1,15 @@
 /* ================================================================
     IMPORT OTHER CSS FILES
+    Only CORE stylesheets belong here — anything that ships with the
+    client itself. Page CSS (welcome, home, and every future page)
+    now lives in the assets repo and is injected at runtime by
+    cache.js's applyStyles(), NOT loaded via @import. Leaving a page's
+    @import here after it moves out will 404 against this repo and
+    the browser will refuse it as CSS (wrong MIME type from the dev
+    server's 404-as-HTML response) — if you add a new CORE-only
+    stylesheet later, @import it here; page stylesheets never go here.
 ================================================================ */
-/* PAGES */
 @import "pages/loading.css";
-@import "pages/welcome.css";
-@import "pages/home.css";
-/* OTHER STYLESHEETS */
 @import "notification.css";
 
 /* ROOT */

@@ -30,31 +30,22 @@ Router.register('loading', (() => {
 		if (loading_bar) loading_bar.style.width = pct + '%';
 	}
 
-	// Shown when syncAssets() has exhausted its retries. Reuses the
-	// existing #loading-screen-notification block (same one used for
-	// the "loading_notif" announcement above) rather than inventing a
-	// second notification UI.
+	// Shown when syncAssets() has exhausted its retries. Uses the real
+	// Notify.big() modal (notification.js) rather than the bespoke
+	// #loading-screen-notification block — same failure UI everywhere
+	// something goes wrong, not a one-off. dismissible: false, since
+	// there's nothing meaningful to dismiss INTO (assets never synced),
+	// so Refresh is the only way forward.
 	function show_failure_notice(reportUrl) {
-		const notif = document.getElementById('loading-screen-notification');
-		const img = document.getElementById('loading-screen-notification-img');
-		if (!notif) return;
-
-		document.getElementById('loading-screen-notification-title').textContent = 'Couldn\'t load game assets';
-		document.getElementById('loading-screen-notification-description').textContent =
-			'Please try reloading the page. If this keeps happening, let us know on GitHub so we can look into it.';
-		document.getElementById('loading-screen-notification-time').textContent = '';
-		if (img) { img.removeAttribute('src'); img.style.display = 'none'; }
-
-		notif.hidden = false;
-		document.body.classList.add('has-notification');
-
-		// Make the description a link to the report URL, if present.
-		if (reportUrl) {
-			const desc = document.getElementById('loading-screen-notification-description');
-			desc.innerHTML =
-				'Please try reloading the page. If this keeps happening, ' +
-				`<a href="${reportUrl}" target="_blank" rel="noopener">report it on GitHub</a>.`;
-		}
+		window.Notify?.big(
+			"Couldn't load game assets",
+			`Please try refreshing. If this keeps happening, report it on GitHub${reportUrl ? '.' : ''}`,
+			{
+				buttonText: 'Refresh',
+				onClose: () => location.reload(),
+				dismissible: true,
+			}
+		);
 	}
 
 	return {
@@ -83,8 +74,13 @@ Router.register('loading', (() => {
 			set_loading_bar(1);
 			edit_loading_percentage(1);
 
-			// Print game version in console
-			const { fetchGameVersion } = await import(app_module_url('js/data/cache.js'));
+			// cache.js is a CORE file (js/data/cache.js, same-origin) — it ships
+			// with the client and is the one thing that can't itself come
+			// from the assets repo. Imported once here and reused for
+			// every call below, rather than re-importing per use.
+			const cache = await import(app_module_url('js/data/cache.js'));
+			const { fetchGameVersion, resolveModuleUrl, syncAssets, applyStyles, applyHTML, applyScripts, startStaleSessionGuard } = cache;
+
 			try {
 				const gameVersion = await fetchGameVersion();
 				console.log(`GAME | Game Version = ${gameVersion}`);
@@ -92,9 +88,12 @@ Router.register('loading', (() => {
 				console.error('loading: failed to fetch game_version', err);
 			}
 
-			// Notification block (may short-circuit the rest)
+			// Notification block (may short-circuit the rest).
+			// extra.js is assets-repo content (kind: "module"), not a core
+			// file — resolved through cache.js's resolveModuleUrl(), same
+			// as everything else that moved out of the client repo.
 			try {
-				const { loading_notif } = await import(app_module_url('js/data/database/extra.js'));
+				const { loading_notif } = await import(await resolveModuleUrl('js/data/database/extra.js'));
 				const [notifEnabled, notifTitle, notifDesc, notifTime, notifImage] = await loading_notif();
 				const notif = document.getElementById('loading-screen-notification');
 				const img   = document.getElementById('loading-screen-notification-img');
@@ -135,7 +134,6 @@ Router.register('loading', (() => {
 			// Here we just react to the result.
 			let syncResult;
 			try {
-				const { syncAssets } = await import(app_module_url('js/data/cache.js'));
 				syncResult = await syncAssets({
 					onProgress: (pct, detail) => {
 						if (!_running) return;
@@ -162,14 +160,45 @@ Router.register('loading', (() => {
 			}
 
 			if (!_running) return;
+
+			// --- Build pages: CSS -> HTML -> scripts, in that order. ---
+			// Order matters: page scripts do document.getElementById(...)
+			// at top-level registration time (not lazily inside start()),
+			// so HTML must exist before scripts run; CSS goes first to
+			// avoid a flash of unstyled content on the freshly-injected
+			// markup. Each function handles its own per-item failures
+			// internally (via Notify.big + middleware logging) and keeps
+			// going rather than aborting the whole boot on one bad file.
+			edit_loading_detail('Applying styles...');
+			set_loading_bar(96);
+			edit_loading_percentage(96);
+			await applyStyles();
+
+			edit_loading_detail('Building pages...');
+			set_loading_bar(98);
+			edit_loading_percentage(98);
+			await applyHTML();
+
+			edit_loading_detail('Starting scripts...');
+			set_loading_bar(99);
+			edit_loading_percentage(99);
+			await applyScripts();
+
+			if (!_running) return;
 			set_loading_bar(100);
 			edit_loading_detail('Launching...');
 			edit_loading_percentage(100);
 			await sleep(500);
 
 			if (!_running) return;
+
+			// Start the stale-session guard once, now that a page is
+			// about to show — see cache.js for why this is visibility-
+			// triggered rather than a polling timer.
+			startStaleSessionGuard();
+
 			try {
-				const { get_logged_in } = await import(app_module_url('js/data/localstorage.js'));
+				const { get_logged_in } = await import(await resolveModuleUrl('js/data/localstorage.js'));
 				if (await get_logged_in() === true) {
 					Router.go('home');
 				} else {

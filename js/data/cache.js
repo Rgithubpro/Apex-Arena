@@ -4,7 +4,7 @@
  * Responsible for:
  *   1. Reading the current game_version value from the middleware server
  *      (general-data table, row where name = "game_version") via
- *      the shared js/data/middleware.js client
+ *      the shared js/middleware.js client
  *   2. Fetching manifest.json for that version from jsDelivr
  *      (jsDelivr URL uses the version as the @tag, e.g. @1.0.0)
  *   3. Diffing against what's cached: bundles are compared by the
@@ -32,7 +32,7 @@
  * Usage from your loading script (works identically in dev and prod —
  * dev mode just has nothing to pre-sync, see syncAssets below):
  *
- *   import { syncAssets } from './js/data/cache.js';
+ *   import { syncAssets } from './js/cache.js';
  *   const result = await syncAssets({ onProgress: (pct, detail) => {...} });
  *   if (result.status === 'failed') {
  *     // show your "please reload / report on GitHub" notice
@@ -42,20 +42,61 @@
  * dev mode fetches fresh from disk each time, prod reads the synced
  * cache):
  *
- *   import { getAsset, applyAssetAttributes } from './js/data/cache.js';
+ *   import { getAsset, applyAssetAttributes } from './js/cache.js';
  *   img.src = await getAsset('assets/logos/logo-apple.png');
  *
  *   // or, to auto-fill every <img data-asset="..."> on a page:
  *   await applyAssetAttributes(document);
+ *
+ * Code/markup delivery (JS/CSS/HTML also served from the assets repo,
+ * same as images — see the "Code/markup delivery" section below):
+ *
+ *   import { applyStyles, applyHTML, applyScripts, resolveModuleUrl }
+ *     from './js/cache.js';
+ *
+ *   await applyStyles();   // injects every *.css loose asset as a <style> tag
+ *   await applyHTML();     // appends every kind:"page"/"snippet" HTML file into .page-container
+ *   await applyScripts();  // appends every kind:"script" JS file as a real <script> tag (runs immediately)
+ *
+ *   // For kind:"module" files (real ES modules, import/export) — these
+ *   // are NOT batch-applied, since unlike scripts they don't need DOM
+ *   // injection. Resolve the URL and import() it yourself, on demand:
+ *   const { someExport } = await import(resolveModuleUrl('js/database.js'));
+ *
+ * Call order matters: applyStyles() -> applyHTML() -> applyScripts(),
+ * always in that order, always after syncAssets() has succeeded (prod)
+ * — page scripts do DOM lookups (e.g. document.getElementById(...)) at
+ * top-level registration time, so their HTML must already exist, and
+ * CSS should be present before HTML paints to avoid a flash of
+ * unstyled content.
  */
 
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
 
+// IMPORTANT — middleware.js must stay a CORE file (same-origin,
+// shipped with the client), not an assets-repo file, even though the
+// earlier plan moved js/data/ there wholesale. Reason: fetchGameVersion()
+// below calls middlewareGet() to find out what the current game_version
+// even IS — but resolving an assets-repo file's URL requires already
+// knowing game_version (to build the jsDelivr @version path). If
+// middleware.js itself lived in the assets repo, reaching it would
+// require a version number that can only be obtained by reaching it
+// first — an unresolvable chicken-and-egg. So middleware.js goes back
+// next to cache.js/router.js/notification.js as a core file — put it
+// back at js/middleware.js in the client repo, not in the assets repo.
 import { middlewareGet, middlewareWrite } from './middleware.js';
 
-const CACHE_NAME = 'apex-arena-assets-v1';
+// Bump the trailing version suffix whenever a code change affects
+// what's already sitting in existing users'/your own Cache API
+// storage in a way syncAssets()'s normal hash-diff can't detect —
+// e.g. the guessContentType() fix that made CSS blobs typed text/css
+// instead of application/octet-stream: the CSS *file* didn't change,
+// so syncAssets() saw no reason to redownload it, and everyone kept
+// serving the old, wrongly-typed cached blob until this was bumped.
+// Bumping here effectively starts everyone from a clean cache once.
+const CACHE_NAME = 'apex-arena-assets-v2';
 const MANIFEST_CACHE_KEY = 'https://cache.local/__manifest__'; // synthetic key, never fetched over network
 
 // Your jsDelivr-hosted assets repo. jsDelivr resolves @<tag/branch>.
@@ -65,7 +106,7 @@ function jsdelivrBase(version) {
 }
 
 // Table names used by this module (connection details live in
-// js/data/middleware.js — this file only knows which tables it needs).
+// js/middleware.js — this file only knows which tables it needs).
 const GENERAL_DATA_TABLE = 'general-data';
 const LOGS_TABLE = 'logs';
 
@@ -73,7 +114,7 @@ const REPORT_URL = 'https://github.com/Rgithubpro/Apex-Arena/issues'; // shown t
 
 // Dev mode: auto-detected from hostname. Bypasses the Cache API
 // entirely and fetches straight from the sibling assets folder.
-export const IS_DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
+export const IS_DEV = false; //['localhost', '127.0.0.1'].includes(location.hostname);
 
 // IMPORTANT: this can't be a relative path like '../apex-arena-assets/'.
 // Live Server serves apex-arena-client/'s CONTENTS as the web root
@@ -89,6 +130,19 @@ const DEV_ASSETS_BASE = 'http://127.0.0.1:5501/'; // <-- confirm this matches wh
 
 // fflate for zip extraction, loaded lazily only if a zip is actually needed.
 const FFLATE_CDN = 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js';
+
+// manifest.config.json — the hand-authored file/kind map that
+// generate-manifest.js reads to tag each loose JS/CSS/HTML file with
+// a "kind" (script | module | page | snippet). In prod this same
+// mapping ends up baked into manifest.json's loose entries (each gets
+// a "kind" field), so prod never re-fetches this file separately. In
+// dev, syncAssets() never runs (see IS_DEV branch below) so there is
+// no synced manifest.json to read "what files exist" from — dev reads
+// this file directly instead, purely as a listing of paths + kinds;
+// the actual bytes for each path still go through the normal
+// getAsset()/getAssetText() dev branch (direct fetch from
+// DEV_ASSETS_BASE, zip-fallback included), exactly as for images.
+const MANIFEST_CONFIG_FILENAME = 'manifest.config.json';
 
 const MAX_ATTEMPTS = 2; // 1 initial + 1 retry, per your "try again, then notify" flow
 
@@ -216,6 +270,14 @@ function guessContentType(assetPath) {
     json: 'application/json', mp3: 'audio/mpeg', ogg: 'audio/ogg',
     wav: 'audio/wav', glb: 'model/gltf-binary', gltf: 'model/gltf+json',
     ttf: 'font/ttf', otf: 'font/otf', woff: 'font/woff', woff2: 'font/woff2',
+    // Code/markup delivery — added when applyStyles()'s CSS moved to
+    // <link href="blob:...">: unlike a <style> tag's textContent, a
+    // <link> REQUIRES its blob be correctly typed as text/css or the
+    // browser silently refuses to apply it (no console error at all
+    // — the exact symptom of "link is in the DOM, nothing renders").
+    // html included for the same reason, in case any HTML delivery
+    // path ever goes through a real blob URL instead of getAssetText.
+    css: 'text/css', html: 'text/html', js: 'application/javascript',
   };
   return map[ext] || 'application/octet-stream';
 }
@@ -400,6 +462,7 @@ async function attemptSync(report) {
       // don't get "rediscovered" as missing next sync.
       await storeManifest(cache, newManifest);
     }
+    markSynced();
     report(100, 'Up to date');
     return { status: 'ok', downloaded: 0, pruned: prunedCount, version };
   }
@@ -428,6 +491,7 @@ async function attemptSync(report) {
   // next attempt instead of silently thinking we're current.
   await storeManifest(cache, newManifest);
 
+  markSynced();
   report(100, 'Assets up to date');
   return { status: 'ok', downloaded: totalItems, pruned: prunedCount, version };
 }
@@ -457,6 +521,7 @@ export async function syncAssets({ onProgress } = {}) {
     // via the same putAsset() prod uses (see getAsset), so that part
     // of the pipeline gets exercised in dev too — it's just always
     // treated as "changed" since we skip diffing entirely.
+    markSynced();
     report(100, 'Dev mode — assets load directly from local folder');
     return { status: 'ok', skipped: true, reason: 'dev-mode' };
   }
@@ -589,6 +654,294 @@ export async function getAsset(assetPath) {
 }
 
 /**
+ * Same resolution as getAsset() (dev: direct-fetch-or-zip-fallback,
+ * prod: synced Cache API lookup) but returns the file's TEXT content
+ * instead of an object URL. Use this for anything you're going to
+ * inject inline — a <style> tag's textContent, a <script> tag's
+ * textContent, or insertAdjacentHTML — rather than something you'd
+ * set as an element's src/href, which should still use getAsset().
+ *
+ * Not just a thin wrapper around getAsset(): calling getAsset() and
+ * then re-fetching its object URL to read the text back would be a
+ * redundant second trip through the Cache API for bytes we already
+ * have in hand. This reuses the exact same lookup, just resolving
+ * blob.text() instead of URL.createObjectURL(blob) at the end.
+ */
+export async function getAssetText(assetPath) {
+  const cache = await openAssetCache();
+
+  if (IS_DEV) {
+    const direct = await fetch(DEV_ASSETS_BASE + assetPath);
+    if (direct.ok) {
+      const blob = await direct.blob();
+      await putAsset(cache, assetPath, blob, guessContentType(assetPath));
+      return blob.text();
+    }
+
+    for (const zipPath of candidateDevZipPaths(assetPath)) {
+      const result = await fetchAndUnzipDev(zipPath);
+      if (!result) continue;
+
+      const { unzipped, prefix } = result;
+      const innerPath = assetPath.slice(prefix.length + 1);
+      if (unzipped[innerPath]) {
+        const bytes = unzipped[innerPath];
+        const blob = new Blob([bytes], { type: guessContentType(assetPath) });
+        await putAsset(cache, assetPath, blob, guessContentType(assetPath));
+        return blob.text();
+      }
+    }
+
+    throw new Error(`Dev asset "${assetPath}" not found directly or inside any candidate .zip under ${DEV_ASSETS_BASE}`);
+  }
+
+  const res = await cache.match(assetCacheUrl(assetPath));
+  if (!res) {
+    throw new Error(`Asset "${assetPath}" not found in cache — was syncAssets() run and did it succeed?`);
+  }
+  const blob = await res.blob();
+  return blob.text();
+}
+
+/**
+ * Resolves a manifest path to a URL suitable for import() — i.e. a
+ * real ES module (kind: "module" in manifest.config.json / manifest.json),
+ * NOT a classic script. Unlike classic scripts (see applyScripts),
+ * modules don't need fetch-as-text-and-inject: browsers can import()
+ * directly from an absolute cross-origin URL, so this just returns
+ * the right URL for the current environment — dev or prod — and
+ * leaves the actual import() call to whoever needs the module,
+ * exactly like the existing app_module_url() pattern in loading.js
+ * already does for core files.
+ *
+ *   const { someExport } = await import(resolveModuleUrl('js/database.js'));
+ *
+ * Prod resolution needs the current game_version to build the
+ * jsDelivr URL — pass it in if you already have it (e.g. loading.js
+ * already called fetchGameVersion()); otherwise this fetches it itself.
+ */
+export async function resolveModuleUrl(assetPath, knownVersion) {
+  if (IS_DEV) {
+    return DEV_ASSETS_BASE + assetPath;
+  }
+  const version = knownVersion || (await fetchGameVersion());
+  return jsdelivrBase(version) + assetPath;
+}
+
+/**
+ * Dev-only: fetches manifest.config.json from the assets folder and
+ * returns it as a plain { path: kind } map. This is dev's stand-in
+ * for "what files exist and what kind are they" — prod gets the same
+ * information from manifest.json's loose entries (each carries its
+ * own "kind" field, baked in by generate-manifest.js from this same
+ * config file) once syncAssets() has run, so prod never fetches this
+ * file directly.
+ */
+let _devManifestConfigPromise = null;
+async function getDevManifestConfig() {
+  if (_devManifestConfigPromise) return _devManifestConfigPromise;
+  _devManifestConfigPromise = (async () => {
+    const res = await fetch(DEV_ASSETS_BASE + MANIFEST_CONFIG_FILENAME);
+    if (!res.ok) {
+      throw new Error(`Dev mode: failed to fetch ${MANIFEST_CONFIG_FILENAME} from ${DEV_ASSETS_BASE} (HTTP ${res.status})`);
+    }
+    return res.json(); // { "js/pages/home.js": "script", "css/pages/home.css": "style", ... }
+  })();
+  return _devManifestConfigPromise;
+}
+
+/**
+ * Returns every loose asset path + its kind, for the current
+ * environment — the single source both applyStyles/applyHTML/
+ * applyScripts iterate over. Prod reads it off the already-synced
+ * manifest.json; dev reads manifest.config.json (see above). Kept as
+ * one function so the three apply* functions below don't each
+ * duplicate this dev/prod branch.
+ */
+async function listKindedAssets() {
+  if (IS_DEV) {
+    const config = await getDevManifestConfig();
+    return Object.entries(config).map(([path, kind]) => ({ path, kind }));
+  }
+  const cache = await openAssetCache();
+  const manifest = await getStoredManifest(cache);
+  if (!manifest) {
+    throw new Error('No synced manifest found — was syncAssets() run and did it succeed?');
+  }
+  return Object.entries(manifest.loose || {})
+    .filter(([, entry]) => entry.kind)
+    .map(([path, entry]) => ({ path, kind: entry.kind, pageKey: entry.pageKey }));
+}
+
+/**
+ * Reports one failed item during applyStyles/applyHTML/applyScripts.
+ * Never throws itself — logs to the middleware (same as the sync
+ * failure path) and shows the blocking failure modal with a Refresh
+ * button, mirroring exactly what a full sync failure shows, so
+ * there's one consistent "something's wrong, here's how to recover"
+ * UI rather than a second bespoke one. Continues past the failure —
+ * one bad page shouldn't hang the whole boot sequence.
+ */
+async function reportApplyFailure(kind, path, err) {
+  console.error(`cache: failed to apply ${kind} "${path}"`, err);
+  await logToMiddleware('asset_apply_failed', {
+    kind,
+    path,
+    error: { message: err?.message, stack: err?.stack },
+  });
+  if (window.Notify?.big) {
+    window.Notify.big(
+      'Something went wrong loading the game',
+      `A part of the game ("${path}") failed to load. Try refreshing — if this keeps happening, please report it on GitHub.`,
+      {
+        buttonText: 'Refresh',
+        onClose: () => location.reload(),
+        dismissible: true,
+      }
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Code/markup delivery — CSS, HTML, and classic scripts served
+// from the assets repo, applied once at boot (called from
+// loading.js, in this order, after syncAssets() succeeds).
+// Real ES modules (kind: "module") are NOT batch-applied here —
+// see resolveModuleUrl() above, they're import()-ed on demand.
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Injects each page's CSS as a <link rel="stylesheet" href="blob:...">
+ * in <head> — one stylesheet per page, following the "css/pages/
+ * <name>.css matches html/pages/<name>.html" convention. Derived from
+ * the page list rather than needing CSS files listed in
+ * manifest.config.json/manifest.json at all — CSS deliberately
+ * carries no "kind", so there's nothing to look up a *.css path FROM
+ * in either environment. A page with no matching CSS file simply gets
+ * skipped (not every page necessarily has its own stylesheet).
+ *
+ * Uses a real blob URL (getAsset, not getAssetText+<style>) so each
+ * stylesheet shows up as its own real, named entry in devtools —
+ * same motivation as applyScripts()'s blob-URL scripts. Unlike
+ * scripts, there's no execution-order concern to preserve here: CSS
+ * has no "ran out of order" failure mode, cascade/specificity handle
+ * ordering regardless of load timing, so this can fire all the
+ * link-appends without awaiting each one before the next (still
+ * awaited so a failure is caught, just no ordering reason to serialize).
+ */
+export async function applyStyles() {
+  const items = await listKindedAssets();
+  const pagePaths = items.filter((i) => i.kind === 'page').map((i) => i.path);
+
+  for (const htmlPath of pagePaths) {
+    // "html/pages/home.html" -> "css/pages/home.css"
+    const name = htmlPath.split('/').pop().replace(/\.html$/, '');
+    const cssPath = `css/pages/${name}.css`;
+    try {
+      const blobUrl = await getAsset(cssPath);
+      await new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = blobUrl;
+        link.dataset.assetPath = cssPath;
+        link.onload = () => resolve();
+        link.onerror = () => reject(new Error(`Stylesheet "${cssPath}" failed to load`));
+        document.head.appendChild(link);
+      });
+      // Not revoked immediately, unlike script blob URLs — a <link>
+      // keeps reading from its href for as long as the stylesheet is
+      // in effect (e.g. if the browser needs to re-parse it), whereas
+      // a <script>'s blob is only read once, at execution time.
+    } catch (err) {
+      // Not every page necessarily has a stylesheet — a 404 here is
+      // only a real failure if you know this page SHOULD have one.
+      // reportApplyFailure still logs/notifies either way, since
+      // "silently missing CSS you expected" is worse than a visible
+      // notice; delete this file from disk entirely (not just leave
+      // it blank) if a page truly has no CSS of its own.
+      await reportApplyFailure('style', cssPath, err);
+    }
+  }
+}
+
+/**
+ * Appends every kind:"page" or kind:"snippet" HTML file. Pages append
+ * into .page-container (their root element already carries its real
+ * id/class="page" baked into the file itself — nothing here assigns
+ * or looks up an id); snippets append to <body> directly. After all
+ * HTML is in the DOM, re-runs applyAssetAttributes() so any newly
+ * injected [data-asset] elements (icons, images, etc.) get resolved.
+ */
+export async function applyHTML() {
+  const items = await listKindedAssets();
+  const pageContainer = document.querySelector('.page-container');
+
+  for (const { path, kind } of items) {
+    if (kind !== 'page' && kind !== 'snippet') continue;
+    try {
+      const html = await getAssetText(path);
+      const target = kind === 'page' ? pageContainer : document.body;
+      target.insertAdjacentHTML('beforeend', html);
+    } catch (err) {
+      await reportApplyFailure(kind, path, err);
+    }
+  }
+
+  await applyAssetAttributes(document);
+}
+
+/**
+ * Appends every kind:"script" JS file as a real <script> tag pointed
+ * at a blob URL (src=..., not inline textContent) — this makes each
+ * script show up as its own real, syntax-highlighted, breakpoint-able
+ * file in devtools' Sources panel instead of a collapsed "VMnnn" blob,
+ * which matters a lot while these are still being actively debugged.
+ *
+ * The tradeoff: a src= script loads/executes ASYNCHRONOUSLY relative
+ * to the code that appended it, unlike textContent (which runs
+ * synchronously, inline, the instant it's appended). Since page
+ * scripts rely on running in a known order (and do DOM lookups at
+ * top-level registration time), this loop explicitly awaits each
+ * script's 'load' event before moving to the next one — so execution
+ * order is still exactly "one at a time, in manifest order", same
+ * guarantee textContent gave, just with one extra explicit step
+ * rather than getting it for free from the browser.
+ *
+ * Appended to <body>, not <head> — placement doesn't affect when it
+ * runs (that's controlled by the explicit await below), purely a
+ * preference for where it shows up in the DOM tree.
+ *
+ * kind:"module" files are never handled here — see resolveModuleUrl().
+ */
+export async function applyScripts() {
+  const items = await listKindedAssets();
+  for (const { path, kind } of items) {
+    if (kind !== 'script') continue;
+    try {
+      const code = await getAssetText(path);
+      const blob = new Blob([code], { type: 'application/javascript' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = blobUrl;
+        script.dataset.assetPath = path;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Script "${path}" failed to execute (see console above for the actual error)`));
+        document.body.appendChild(script);
+      });
+
+      // Safe to revoke once loaded — the script has already executed
+      // (its Router.register(...) call, etc. already ran); the blob
+      // URL only needs to stay alive long enough for that.
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      await reportApplyFailure('script', path, err);
+    }
+  }
+}
+
+/**
  * Convenience: finds every element with a `data-asset="..."` attribute
  * under `root` and sets its src (or background-image, for non-img
  * elements) to the resolved cached asset. Safe to call once after
@@ -618,3 +971,49 @@ export async function applyAssetAttributes(root = document) {
 export async function clearAssetCache() {
   await caches.delete(CACHE_NAME);
 }
+
+// ─────────────────────────────────────────────────────────────
+// Stale-session guard
+// Not a polling timer — a naive setInterval would keep firing (just
+// throttled) even while the tab is backgrounded, which isn't the
+// scenario worth guarding: a player who opens the game, tabs away for
+// hours, then comes BACK to an already-loaded tab without refreshing.
+// Instead this checks elapsed time only at the moment the tab becomes
+// visible again — cheap, and only fires when it's actually relevant.
+// ─────────────────────────────────────────────────────────────
+
+const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+let _lastSyncAt = null;
+
+/** Called internally by syncAssets() on every successful attempt. */
+function markSynced() {
+  _lastSyncAt = Date.now();
+}
+
+/**
+ * Call once, after the loading sequence finishes (e.g. right after
+ * Router.go('welcome'/'home') in loading.js). Listens for the tab
+ * coming back into view and, if it's been over an hour since the last
+ * successful sync, prompts the player to refresh — via the same
+ * Notify.big() modal used everywhere else, not a forced reload, so a
+ * player mid-match is never yanked out.
+ */
+export function startStaleSessionGuard() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!_lastSyncAt) return; // never synced yet (e.g. dev mode) — nothing to compare against
+    if (Date.now() - _lastSyncAt < STALE_THRESHOLD_MS) return;
+
+    window.Notify?.big(
+      "You've been away a while",
+      "There may be a newer version of the game. Refresh to make sure you're up to date.",
+      {
+        buttonText: 'Refresh',
+        onClose: () => location.reload(),
+        dismissible: true,
+      }
+    );
+  });
+}
+
+logToMiddleware('asset_cache_module_loaded', { IS_DEV, CACHE_NAME, JSDELIVR_REPO, DEV_ASSETS_BASE });
