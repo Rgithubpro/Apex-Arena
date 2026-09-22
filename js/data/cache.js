@@ -114,7 +114,7 @@ const REPORT_URL = 'https://github.com/Rgithubpro/Apex-Arena/issues'; // shown t
 
 // Dev mode: auto-detected from hostname. Bypasses the Cache API
 // entirely and fetches straight from the sibling assets folder.
-export const IS_DEV = false; //['localhost', '127.0.0.1'].includes(location.hostname);
+export const IS_DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
 
 // IMPORTANT: this can't be a relative path like '../apex-arena-assets/'.
 // Live Server serves apex-arena-client/'s CONTENTS as the web root

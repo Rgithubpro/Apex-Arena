@@ -29,11 +29,36 @@
 [hidden] {
   display: none !important;
 }
+
+/* Non-scrollable, non-zoomable app shell. Belongs on html/body, not
+   just .page-container, or the browser chrome (address bar hide/show,
+   overscroll glow) still reacts around the edges. */
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;               /* the actual "non-scrollable" */
+    overscroll-behavior: none;      /* kills pull-to-refresh + rubber-band bounce */
+    touch-action: manipulation;     /* removes double-tap-zoom + the ~300ms tap delay */
+    -webkit-text-size-adjust: 100%; /* stops iOS auto-enlarging text in landscape */
+    -webkit-tap-highlight-color: transparent; /* no gray flash on tap */
+    -webkit-touch-callout: none;    /* no long-press "save image" menu */
+    -webkit-user-select: none;      /* no accidental text selection while playing */
+    user-select: none;
+}
+
+/* text inputs still need to be selectable/typeable */
+input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
 /* Shows pages and animates the transitions */
 .page-container {
     position: relative;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100vh;   /* fallback for browsers without dvh support */
+    height: 100dvh;  /* real visible height — 100vh on mobile is measured with the address bar hidden, so content sized to it can sit partly behind the bar */
 }
 
 .page {

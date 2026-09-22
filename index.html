@@ -2,32 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Apex-Arena</title>
     <meta name="description" content="Play Apex-Arena now!">
     <meta name="author" content="Ralph Broekaart">
     <link rel="icon" type="icon" href="assets/logos/apex-arena.png">
     <link rel="stylesheet" href="css/style.css">
+<!-- PWA installability + how the installed app should look -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0d111f">
+<!-- Android/Chrome: run fullscreen when launched from home screen -->
+    <meta name="mobile-web-app-capable" content="yes">
+<!-- iOS Safari: its own separate set of tags, ignores the ones above -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Apex Arena">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/icons/icon-180.jpg">
 </head>
 <body>
 <!-- ================================================================
   CORE SCRIPTS
-  Everything here MUST ship with the client itself — it's what
-  bootstraps and fetches everything else. Nothing else lives here
-  anymore: welcome/home (and every future page)'s HTML, CSS, and JS
-  now live in the assets repo and are injected by cache.js's
-  applyStyles()/applyHTML()/applyScripts(), called from loading.js
-  once syncAssets() succeeds. See engineering notes for the full
-  core-vs-assets boundary.
 ================================================================= -->
     <script src="js/router.js"></script>
     <script src="js/pages/loading.js"></script>
     <script src="js/notification.js"></script>
 
 <!-- ================================================================
-    NOTIFICATIONS  →  Toast + Modal (global, works on any page)
-    Core: loading.js itself depends on this for failure reporting,
-    before any page has loaded.
+    NOTIFICATIONS  →  Toast + Modal. This is CORE
 ================================================================= -->
     <div id="notification-toast" class="notification-toast" hidden>
         <p id="notification-toast-text"></p>
@@ -43,12 +44,7 @@
 
     <div class="page-container">
 <!-- ================================================================
-  LOADING  →  #loading
-  Core: this is the ONLY page whose markup stays in index.html — it
-  has to be visible before a single asset has been fetched, or the
-  player sees an empty white screen while cache.js is still working.
-  Every other page gets appended into .page-container below this one,
-  at runtime, by applyHTML().
+  LOADING  This is CORE
 ================================================================= -->
         <div id="loading-screen" class="page">
             <img data-asset="assets/backgrounds/loading.png" src="assets/backgrounds/loading.png" alt="" id="loading-screen-image">
@@ -70,8 +66,7 @@
                 <img alt="" id="loading-screen-notification-img">
             </div>
         </div>
-        <!-- welcome-screen, home-screen, and every future page get
-             appended here at runtime by cache.js's applyHTML() -->
+        <!-- Other pages get added here at runtime -->
     </div>
 </body>
 </html>
