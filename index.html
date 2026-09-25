@@ -18,6 +18,19 @@
     <meta name="apple-mobile-web-app-title" content="Apex Arena">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="assets/icons/icon-180.jpg">
+    <script>
+        function setRealVH() {
+            const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            document.documentElement.style.setProperty('--real-vh', vh + 'px');
+            console.log('GAME | Device height: ' + vh + 'px');
+        }
+        setRealVH();
+        window.addEventListener('resize', setRealVH);
+        window.addEventListener('orientationchange', setRealVH);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', setRealVH);
+        }
+    </script>
 </head>
 <body>
 <!-- ================================================================

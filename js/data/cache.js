@@ -96,7 +96,7 @@ import { middlewareGet, middlewareWrite } from './middleware.js';
 // so syncAssets() saw no reason to redownload it, and everyone kept
 // serving the old, wrongly-typed cached blob until this was bumped.
 // Bumping here effectively starts everyone from a clean cache once.
-const CACHE_NAME = 'apex-arena-assets-v2';
+const CACHE_NAME = 'apex-arena-assets-v1';
 const MANIFEST_CACHE_KEY = 'https://cache.local/__manifest__'; // synthetic key, never fetched over network
 
 // Your jsDelivr-hosted assets repo. jsDelivr resolves @<tag/branch>.
@@ -211,6 +211,26 @@ async function openAssetCache() {
   return caches.open(CACHE_NAME);
 }
 
+/**
+ * Asks the browser not to evict this origin's storage (the Cache API
+ * included) when the device runs low on space. It's a request, not a
+ * guarantee: Chrome/Edge decide silently from their own heuristics
+ * (installed app, bookmarked, frequent visits), Firefox shows the
+ * player a permission prompt. Called without await from syncAssets()
+ * so a prompt never holds up loading. If it's refused, nothing breaks:
+ * an eviction just means the next load re-downloads everything.
+ */
+async function requestPersistentStorage() {
+  try {
+    if (!navigator.storage?.persist) return;
+    if (await navigator.storage.persisted()) return; // already granted
+    const granted = await navigator.storage.persist();
+    if (!granted) console.warn('cache: persistent storage not granted — cached assets may be evicted if the device runs low on space');
+  } catch (err) {
+    console.warn('cache: persistent storage request failed (non-fatal)', err);
+  }
+}
+
 async function getStoredManifest(cache) {
   const res = await cache.match(MANIFEST_CACHE_KEY);
   if (!res) return null;
@@ -294,7 +314,10 @@ function loadFflate() {
     const script = document.createElement('script');
     script.src = FFLATE_CDN;
     script.onload = () => resolve(window.fflate);
-    script.onerror = () => reject(new Error('Failed to load fflate from CDN'));
+    script.onerror = () => {
+      _fflatePromise = null; // let a retry attempt try the CDN again instead of reusing this failure
+      reject(new Error('Failed to load fflate from CDN'));
+    };
     document.head.appendChild(script);
   });
   return _fflatePromise;
@@ -358,75 +381,146 @@ async function pruneRemovedAssets(cache, oldManifest, newManifest, changedBundle
   const newLoosePaths = new Set(Object.keys(newManifest.loose || {}));
   const oldLoose = oldManifest?.loose || {};
   const oldBundles = oldManifest?.bundles || {};
-  const newBundleZipPaths = new Set(Object.keys(newManifest.bundles || {}));
+  const newBundles = newManifest.bundles || {};
+  const changedZips = new Set(changedBundleZipPaths);
 
-  let prunedCount = 0;
+  const toDelete = new Set();
 
   // Loose files no longer present in the new manifest.
   for (const oldPath of Object.keys(oldLoose)) {
-    if (!newLoosePaths.has(oldPath)) {
-      await deleteAsset(cache, oldPath);
-      prunedCount++;
-    }
+    if (!newLoosePaths.has(oldPath)) toDelete.add(oldPath);
   }
 
-  // Bundles no longer present in the new manifest at all: wipe their
-  // entire unpacked folder.
+  // Folders to wipe: bundles removed entirely, plus bundles that
+  // changed (their old folder is cleared before the fresh unzip
+  // writes the new set, so a shrinking bundle leaves nothing behind).
+  const wipePrefixes = [];
   for (const [zipPath, entry] of Object.entries(oldBundles)) {
-    if (!newBundleZipPaths.has(zipPath)) {
-      const stale = await listCachedAssetsUnderPrefix(cache, entry.prefix);
-      for (const p of stale) {
-        await deleteAsset(cache, p);
-        prunedCount++;
-      }
+    if (!newBundles[zipPath] || changedZips.has(zipPath)) wipePrefixes.push(entry.prefix);
+  }
+
+  if (wipePrefixes.length > 0) {
+    // Prefixes whose contents must survive a wipe: unchanged bundles
+    // (they won't be re-downloaded, so wiping them would lose files
+    // for good if their folder is nested inside a wiped one).
+    const keepPrefixes = Object.entries(newBundles)
+      .filter(([zipPath]) => !changedZips.has(zipPath) && oldBundles[zipPath])
+      .map(([, entry]) => entry.prefix + '/');
+
+    const base = 'https://cache.local/asset/';
+    const wipeUrlPrefixes = wipePrefixes.map((p) => base + p + '/');
+
+    // One cache.keys() call for ALL wiped folders (it returns every
+    // cached entry, so calling it once per bundle was the slow part).
+    const keys = await cache.keys();
+    for (const req of keys) {
+      if (!wipeUrlPrefixes.some((p) => req.url.startsWith(p))) continue;
+      const assetPath = req.url.slice(base.length);
+      if (newLoosePaths.has(assetPath)) continue; // an unchanged loose file that happens to live in there
+      if (keepPrefixes.some((p) => assetPath.startsWith(p))) continue;
+      toDelete.add(assetPath);
     }
   }
 
-  // Bundles that changed: wipe their old folder entirely before the
-  // fresh unzip writes the new set — simplest correct way to handle
-  // a shrinking bundle (fewer files in the new zip than the old one).
-  for (const zipPath of changedBundleZipPaths) {
-    const oldEntry = oldBundles[zipPath];
-    if (!oldEntry) continue; // wasn't cached before, nothing to wipe
-    const stale = await listCachedAssetsUnderPrefix(cache, oldEntry.prefix);
-    for (const p of stale) {
-      await deleteAsset(cache, p);
-      prunedCount++;
-    }
-  }
-
-  return prunedCount;
+  await pool([...toDelete], CACHE_WRITE_CONCURRENCY, (assetPath) => deleteAsset(cache, assetPath));
+  return toDelete.size;
 }
 
 // ─────────────────────────────────────────────────────────────
 // Download + store
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Runs fn(item) over items with at most `limit` in flight at once.
+ * On the first failure it stops handing out new items, waits for the
+ * ones already running to finish (so a retry attempt never overlaps
+ * with leftover writes from the failed one), then rejects with that
+ * first error.
+ */
+async function pool(items, limit, fn) {
+  let next = 0;
+  let failed = false;
+  let firstError;
+  const worker = async () => {
+    while (!failed && next < items.length) {
+      const item = items[next++];
+      try {
+        await fn(item);
+      } catch (err) {
+        if (!failed) {
+          failed = true;
+          firstError = err;
+        }
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  if (failed) throw firstError;
+}
+
+const CACHE_WRITE_CONCURRENCY = 32; // parallel cache.put() calls while storing an unzipped bundle
+const DOWNLOAD_CONCURRENCY = 6;     // parallel network downloads (bundles + loose files)
+
+/**
+ * Checks downloaded bytes against the hash recorded in manifest.json.
+ * Mirrors generate-manifest.js exactly: SHA-256, hex, first 16 chars
+ * (the comparison uses the expected hash's own length, so it keeps
+ * working if the generator's length ever changes). Throws on mismatch,
+ * BEFORE anything is written to the cache, so a bad download can never
+ * be stored — the sync attempt fails, retries once, then shows the
+ * usual failure notice.
+ *
+ * crypto.subtle only exists on secure origins (https or localhost). If
+ * it's missing we warn and skip rather than break the game.
+ */
+async function verifyHash(buf, expectedHash, label) {
+  if (!expectedHash) return; // manifest entry has no hash — nothing to compare against
+  if (!globalThis.crypto?.subtle) {
+    console.warn(`cache: crypto.subtle unavailable — skipping integrity check for "${label}"`);
+    return;
+  }
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  const hex = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+  if (hex.slice(0, expectedHash.length) !== expectedHash) {
+    throw new Error(`Integrity check failed for "${label}": downloaded file does not match the manifest hash`);
+  }
+}
+
 async function downloadAndStoreBundle(cache, base, bundle, onBytes) {
   const res = await fetch(base + bundle.zipPath);
   if (!res.ok) throw new Error(`Failed to download bundle "${bundle.zipPath}" (HTTP ${res.status})`);
   const buf = await res.arrayBuffer();
   onBytes(buf.byteLength);
+  await verifyHash(buf, bundle.hash, bundle.zipPath); // must happen before unzip (which may take over the buffer)
 
   const fflate = await loadFflate();
   const unzipped = await new Promise((resolve, reject) => {
     fflate.unzip(new Uint8Array(buf), (err, data) => (err ? reject(err) : resolve(data)));
   });
 
-  for (const [innerPath, bytes] of Object.entries(unzipped)) {
-    if (innerPath.endsWith('/')) continue; // directory entry
+  // One cache.put per file is the slow part (each is a separate disk
+  // write), so run them concurrently instead of awaiting one by one.
+  // The bytes go straight into Response — no intermediate Blob needed.
+  const entries = Object.entries(unzipped).filter(([innerPath]) => !innerPath.endsWith('/')); // skip directory entries
+  await pool(entries, CACHE_WRITE_CONCURRENCY, ([innerPath, bytes]) => {
     const finalPath = `${bundle.prefix}/${innerPath}`;
-    const contentType = guessContentType(finalPath);
-    await putAsset(cache, finalPath, new Blob([bytes], { type: contentType }), contentType);
-  }
+    return cache.put(
+      assetCacheUrl(finalPath),
+      new Response(bytes, { headers: { 'Content-Type': guessContentType(finalPath) } })
+    );
+  });
 }
 
 async function downloadAndStoreLoose(cache, base, file, onBytes) {
   const res = await fetch(base + file.assetPath);
   if (!res.ok) throw new Error(`Failed to download "${file.assetPath}" (HTTP ${res.status})`);
-  const blob = await res.blob();
-  onBytes(blob.size);
-  await putAsset(cache, file.assetPath, blob, guessContentType(file.assetPath));
+  const buf = await res.arrayBuffer();
+  onBytes(buf.byteLength);
+  await verifyHash(buf, file.hash, file.assetPath);
+  await cache.put(
+    assetCacheUrl(file.assetPath),
+    new Response(buf, { headers: { 'Content-Type': guessContentType(file.assetPath) } })
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -476,14 +570,22 @@ async function attemptSync(report) {
     report(pct, `Downloading assets... (${(bytesSoFar / 1024 / 1024).toFixed(1)} MB)`);
   };
 
-  for (const bundle of changedBundles) {
-    report(undefined, `Downloading ${bundle.zipPath.split('/').pop()}...`);
-    await downloadAndStoreBundle(cache, base, bundle, onBytes);
-  }
+  // Start loading fflate now so it arrives while the zips download,
+  // instead of only starting after the first zip has finished. The
+  // .catch here only silences an "unhandled rejection" warning — the
+  // real error still surfaces where downloadAndStoreBundle awaits it.
+  if (changedBundles.length > 0) loadFflate().catch(() => {});
 
-  for (const file of changedLoose) {
-    await downloadAndStoreLoose(cache, base, file, onBytes);
-  }
+  // Bundles and loose files download concurrently. Bundles are listed
+  // first so the big zips get started before the small files.
+  const tasks = [
+    ...changedBundles.map((bundle) => () => {
+      report(undefined, `Downloading ${bundle.zipPath.split('/').pop()}...`);
+      return downloadAndStoreBundle(cache, base, bundle, onBytes);
+    }),
+    ...changedLoose.map((file) => () => downloadAndStoreLoose(cache, base, file, onBytes)),
+  ];
+  await pool(tasks, DOWNLOAD_CONCURRENCY, (task) => task());
 
   // Only commit the new manifest once every changed item has actually
   // downloaded successfully. If something throws above, the old
@@ -526,12 +628,16 @@ export async function syncAssets({ onProgress } = {}) {
     return { status: 'ok', skipped: true, reason: 'dev-mode' };
   }
 
+  requestPersistentStorage(); // fire-and-forget — must not block loading (Firefox may show a prompt)
+
   let lastError = null;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       if (attempt > 1) report(0, `Retrying (attempt ${attempt}/${MAX_ATTEMPTS})...`);
-      return await attemptSync(report);
+      const result = await attemptSync(report);
+      clearAssetUrlMemo(); // cache contents may have changed — drop any URLs made from the old ones
+      return result;
     } catch (err) {
       lastError = err;
       console.error(`cache: sync attempt ${attempt} failed`, err);
@@ -615,7 +721,36 @@ async function fetchAndUnzipDev(zipPath) {
  * diff to go stale), while still exercising the real Cache API
  * storage code path.
  */
-export async function getAsset(assetPath) {
+// Prod only: assetPath -> Promise<blob URL>. Storing the *promise*
+// (not the finished URL) means many elements asking for the same asset
+// at once — e.g. applyAssetAttributes() over a page full of the same
+// logo — share one cache lookup instead of each doing their own.
+// Cleared after every successful sync (see syncAssets/clearAssetCache),
+// so a URL can never outlive the cache contents it was made from.
+// Dev mode skips this entirely to keep its "always fresh from disk" behavior.
+const _assetUrlMemo = new Map();
+
+function clearAssetUrlMemo() {
+  _assetUrlMemo.clear();
+}
+
+export function getAsset(assetPath) {
+  if (IS_DEV) return loadAssetUrl(assetPath);
+
+  let pending = _assetUrlMemo.get(assetPath);
+  if (!pending) {
+    pending = loadAssetUrl(assetPath);
+    _assetUrlMemo.set(assetPath, pending);
+    // A failed lookup must not stay memoized, or a later retry (e.g.
+    // after a sync finishes) would keep getting the same rejection.
+    pending.catch(() => {
+      if (_assetUrlMemo.get(assetPath) === pending) _assetUrlMemo.delete(assetPath);
+    });
+  }
+  return pending;
+}
+
+async function loadAssetUrl(assetPath) {
   const cache = await openAssetCache();
 
   if (IS_DEV) {
@@ -969,6 +1104,7 @@ export async function applyAssetAttributes(root = document) {
 
 /** Wipes the entire asset cache. Useful for a "force redownload" debug button. */
 export async function clearAssetCache() {
+  clearAssetUrlMemo();
   await caches.delete(CACHE_NAME);
 }
 
@@ -1015,5 +1151,3 @@ export function startStaleSessionGuard() {
     );
   });
 }
-
-logToMiddleware('asset_cache_module_loaded', { IS_DEV, CACHE_NAME, JSDELIVR_REPO, DEV_ASSETS_BASE });
