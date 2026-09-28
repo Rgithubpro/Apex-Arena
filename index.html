@@ -12,22 +12,13 @@
 <body>
 <!-- ================================================================
   CORE SCRIPTS
-  Everything here MUST ship with the client itself — it's what
-  bootstraps and fetches everything else. Nothing else lives here
-  anymore: welcome/home (and every future page)'s HTML, CSS, and JS
-  now live in the assets repo and are injected by cache.js's
-  applyStyles()/applyHTML()/applyScripts(), called from loading.js
-  once syncAssets() succeeds. See engineering notes for the full
-  core-vs-assets boundary.
 ================================================================= -->
     <script src="js/router.js"></script>
     <script src="js/pages/loading.js"></script>
     <script src="js/notification.js"></script>
 
 <!-- ================================================================
-    NOTIFICATIONS  →  Toast + Modal (global, works on any page)
-    Core: loading.js itself depends on this for failure reporting,
-    before any page has loaded.
+    NOTIFICATIONS  →  Toast + Modal
 ================================================================= -->
     <div id="notification-toast" class="notification-toast" hidden>
         <p id="notification-toast-text"></p>
@@ -44,11 +35,6 @@
     <div class="page-container">
 <!-- ================================================================
   LOADING  →  #loading
-  Core: this is the ONLY page whose markup stays in index.html — it
-  has to be visible before a single asset has been fetched, or the
-  player sees an empty white screen while cache.js is still working.
-  Every other page gets appended into .page-container below this one,
-  at runtime, by applyHTML().
 ================================================================= -->
         <div id="loading-screen" class="page">
             <img data-asset="assets/backgrounds/loading.png" src="assets/backgrounds/loading.png" alt="" id="loading-screen-image">
@@ -70,8 +56,6 @@
                 <img alt="" id="loading-screen-notification-img">
             </div>
         </div>
-        <!-- welcome-screen, home-screen, and every future page get
-             appended here at runtime by cache.js's applyHTML() -->
     </div>
 </body>
 </html>
