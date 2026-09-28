@@ -2,8 +2,8 @@
  * Apex Arena — Asset Cache Engine
  * ---------------------------------
  * Responsible for:
- *   1. Reading the current game_version value from the middleware server
- *      (general-data table, row where name = "game_version") via
+ *   1. Reading the current assets_version value from the middleware server
+ *      (general-data table, row where name = "assets_version") via
  *      the shared js/middleware.js client
  *   2. Fetching manifest.json for that version from jsDelivr
  *      (jsDelivr URL uses the version as the @tag, e.g. @1.0.0)
@@ -78,9 +78,9 @@
 // IMPORTANT — middleware.js must stay a CORE file (same-origin,
 // shipped with the client), not an assets-repo file, even though the
 // earlier plan moved js/data/ there wholesale. Reason: fetchGameVersion()
-// below calls middlewareGet() to find out what the current game_version
+// below calls middlewareGet() to find out what the current assets_version
 // even IS — but resolving an assets-repo file's URL requires already
-// knowing game_version (to build the jsDelivr @version path). If
+// knowing assets_version (to build the jsDelivr @version path). If
 // middleware.js itself lived in the assets repo, reaching it would
 // require a version number that can only be obtained by reaching it
 // first — an unresolvable chicken-and-egg. So middleware.js goes back
@@ -114,7 +114,7 @@ const REPORT_URL = 'https://github.com/Rgithubpro/Apex-Arena/issues'; // shown t
 
 // Dev mode: auto-detected from hostname. Bypasses the Cache API
 // entirely and fetches straight from the sibling assets folder.
-export const IS_DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
+export const IS_DEV = false; //['localhost', '127.0.0.1'].includes(location.hostname);
 
 // IMPORTANT: this can't be a relative path like '../apex-arena-assets/'.
 // Live Server serves apex-arena-client/'s CONTENTS as the web root
@@ -154,6 +154,12 @@ export async function fetchAssetsVersion() {
   const row = await middlewareGet(GENERAL_DATA_TABLE, 'assets_version');
   if (!row || !row.value) throw new Error('general-data has no assets_version row');
   return row.value; // e.g. "1.0.0"
+}
+
+export async function fetchGameVersion() {
+  const row = await middlewareGet(GENERAL_DATA_TABLE, 'game_version');
+  if (!row || !row.value) throw new Error('general-data has no game_version row');
+  return row.value;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -527,9 +533,9 @@ async function downloadAndStoreLoose(cache, base, file, onBytes) {
 // Core sync attempt (one try — retry/failure handling wraps this)
 // ─────────────────────────────────────────────────────────────
 
-async function attemptSync(report) {
+async function attemptSync(report, knownVersion) {
   report(5, 'Checking for updates...');
-  const version = await fetchGameVersion();
+  const version = knownVersion || await fetchAssetsVersion();
   const base = jsdelivrBase(version);
 
   report(10, 'Fetching manifest...');
@@ -611,7 +617,7 @@ async function attemptSync(report) {
  *      the caller can show a "please reload, or report this on
  *      GitHub" notice.
  */
-export async function syncAssets({ onProgress } = {}) {
+export async function syncAssets({ onProgress, assetsVersion } = {}) {
   const report = (pct, detail) => onProgress && onProgress(pct, detail);
 
   if (IS_DEV) {
@@ -635,7 +641,7 @@ export async function syncAssets({ onProgress } = {}) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       if (attempt > 1) report(0, `Retrying (attempt ${attempt}/${MAX_ATTEMPTS})...`);
-      const result = await attemptSync(report);
+      const result = await attemptSync(report, assetsVersion);
       clearAssetUrlMemo(); // cache contents may have changed — drop any URLs made from the old ones
       return result;
     } catch (err) {
@@ -851,15 +857,15 @@ export async function getAssetText(assetPath) {
  *
  *   const { someExport } = await import(resolveModuleUrl('js/database.js'));
  *
- * Prod resolution needs the current game_version to build the
- * jsDelivr URL — pass it in if you already have it (e.g. loading.js
- * already called fetchGameVersion()); otherwise this fetches it itself.
+ * Prod resolution needs the current assets_version to build the
+ * jsDelivr URL — pass it in if loading.js already fetched it;
+ * otherwise this function fetches it itself.
  */
 export async function resolveModuleUrl(assetPath, knownVersion) {
   if (IS_DEV) {
     return DEV_ASSETS_BASE + assetPath;
   }
-  const version = knownVersion || (await fetchGameVersion());
+  const version = knownVersion || (await fetchAssetsVersion());
   return jsdelivrBase(version) + assetPath;
 }
 

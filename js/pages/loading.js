@@ -79,24 +79,18 @@ Router.register('loading', (() => {
 			// from the assets repo. Imported once here and reused for
 			// every call below, rather than re-importing per use.
 			const cache = await import(app_module_url('js/data/cache.js'));
-			const middleware = await import(app_module_url('js/data/middleware.js'));
-			const { fetchAssetsVersion, resolveModuleUrl, syncAssets, applyStyles, applyHTML, applyScripts, startStaleSessionGuard } = cache;
-			const { middlewareGet } = middleware;
+			const { fetchAssetsVersion, fetchGameVersion, resolveModuleUrl, syncAssets, applyStyles, applyHTML, applyScripts, startStaleSessionGuard } = cache;
 
-			async function fetchGameVersion() {
-			  const row = await middlewareGet('general-data', 'game_version');
-			  if (!row || !row.value) throw new Error('general-data has no game_version row');
-			  return row.value; // e.g. "1.0.0"
-			}
-
+			let assetsVersion = null;
 			try {
-				const assetsVersion = await fetchAssetsVersion();
+				assetsVersion = await fetchAssetsVersion();
 				console.log(`GAME | Assets Version = ${assetsVersion}`);
 			} catch (err) {
 				console.error('loading: failed to fetch assets_version', err);
 			}
+			let gameVersion = null;
 			try {
-				const gameVersion = await fetchGameVersion();
+				gameVersion = await fetchGameVersion();
 				console.log(`GAME | Game Version = ${gameVersion}`);
 			} catch (err) {
 				console.error('loading: failed to fetch game_version', err);
@@ -107,7 +101,7 @@ Router.register('loading', (() => {
 			// file — resolved through cache.js's resolveModuleUrl(), same
 			// as everything else that moved out of the client repo.
 			try {
-				const { loading_notif } = await import(await resolveModuleUrl('js/data/database/extra.js'));
+				const { loading_notif } = await import(await resolveModuleUrl('js/data/database/extra.js', assetsVersion));
 				const [notifEnabled, notifTitle, notifDesc, notifTime, notifImage] = await loading_notif();
 				const notif = document.getElementById('loading-screen-notification');
 				const img   = document.getElementById('loading-screen-notification-img');
@@ -149,6 +143,7 @@ Router.register('loading', (() => {
 			let syncResult;
 			try {
 				syncResult = await syncAssets({
+					assetsVersion,
 					onProgress: (pct, detail) => {
 						if (!_running) return;
 						if (typeof pct === 'number') {
@@ -212,7 +207,7 @@ Router.register('loading', (() => {
 			startStaleSessionGuard();
 
 			try {
-				const { get_logged_in } = await import(await resolveModuleUrl('js/data/localstorage.js'));
+				const { get_logged_in } = await import(await resolveModuleUrl('js/data/localstorage.js', assetsVersion));
 				if (await get_logged_in() === true) {
 					Router.go('home');
 				} else {
