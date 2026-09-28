@@ -150,9 +150,9 @@ const MAX_ATTEMPTS = 2; // 1 initial + 1 retry, per your "try again, then notify
 // Middleware: version lookup
 // ─────────────────────────────────────────────────────────────
 
-export async function fetchGameVersion() {
-  const row = await middlewareGet(GENERAL_DATA_TABLE, 'game_version');
-  if (!row || !row.value) throw new Error('general-data has no game_version row');
+export async function fetchAssetsVersion() {
+  const row = await middlewareGet(GENERAL_DATA_TABLE, 'assets_version');
+  if (!row || !row.value) throw new Error('general-data has no assets_version row');
   return row.value; // e.g. "1.0.0"
 }
 

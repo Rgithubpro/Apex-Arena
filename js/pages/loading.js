@@ -79,8 +79,22 @@ Router.register('loading', (() => {
 			// from the assets repo. Imported once here and reused for
 			// every call below, rather than re-importing per use.
 			const cache = await import(app_module_url('js/data/cache.js'));
-			const { fetchGameVersion, resolveModuleUrl, syncAssets, applyStyles, applyHTML, applyScripts, startStaleSessionGuard } = cache;
+			const middleware = await import(app_module_url('js/data/middleware.js'));
+			const { fetchAssetsVersion, resolveModuleUrl, syncAssets, applyStyles, applyHTML, applyScripts, startStaleSessionGuard } = cache;
+			const { middlewareGet } = middleware;
 
+			async function fetchGameVersion() {
+			  const row = await middlewareGet('general-data', 'game_version');
+			  if (!row || !row.value) throw new Error('general-data has no game_version row');
+			  return row.value; // e.g. "1.0.0"
+			}
+
+			try {
+				const assetsVersion = await fetchAssetsVersion();
+				console.log(`GAME | Assets Version = ${assetsVersion}`);
+			} catch (err) {
+				console.error('loading: failed to fetch assets_version', err);
+			}
 			try {
 				const gameVersion = await fetchGameVersion();
 				console.log(`GAME | Game Version = ${gameVersion}`);
