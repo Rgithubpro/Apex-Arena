@@ -30,6 +30,62 @@ Router.register('loading', (() => {
 		if (loading_bar) loading_bar.style.width = pct + '%';
 	}
 
+	function parse_loading_notif_data(value) {
+		if (Array.isArray(value)) {
+			if (value.length !== 4) throw new Error('loading_notif_data must contain four values');
+			return value;
+		}
+		if (typeof value !== 'string') {
+			throw new Error('loading_notif_data must be a string or array');
+		}
+
+		const text = value.trim();
+		if (text.startsWith('[')) {
+			const parsed = JSON.parse(text);
+			if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+			throw new Error('loading_notif_data must contain four values');
+		}
+
+		// general-data currently stores four single-quoted, comma-separated
+		// values. Commas inside a quoted description are preserved, and SQL
+		// escaped apostrophes ('') are converted back to single apostrophes.
+		const values = [];
+		let index = 0;
+		while (index < text.length) {
+			while (/\s/.test(text[index] || '')) index++;
+			if (text[index] !== "'") throw new Error('Invalid loading_notif_data format');
+			index++;
+
+			let field = '';
+			let closed = false;
+			while (index < text.length) {
+				if (text[index] === "'") {
+					if (text[index + 1] === "'") {
+						field += "'";
+						index += 2;
+					} else {
+						index++;
+						closed = true;
+						break;
+					}
+				} else {
+					field += text[index++];
+				}
+			}
+			if (!closed) throw new Error('Unclosed value in loading_notif_data');
+			values.push(field);
+
+			while (/\s/.test(text[index] || '')) index++;
+			if (index < text.length) {
+				if (text[index] !== ',') throw new Error('Invalid loading_notif_data separator');
+				index++;
+			}
+		}
+
+		if (values.length !== 4) throw new Error('loading_notif_data must contain four values');
+		return values;
+	}
+
 	// Shown when syncAssets() has exhausted its retries. Uses the real
 	// Notify.big() modal (notification.js) rather than the bespoke
 	// #loading-screen-notification block — same failure UI everywhere
@@ -96,16 +152,17 @@ Router.register('loading', (() => {
 				console.error('loading: failed to fetch game_version', err);
 			}
 
-			// Notification block (may short-circuit the rest).
-			// extra.js is assets-repo content (kind: "module"), not a core
-			// file — resolved through cache.js's resolveModuleUrl(), same
-			// as everything else that moved out of the client repo.
+			// Notification settings live in general-data and are read via the
+			// core middleware client, so this works before assets are synced.
 			try {
-				const { loading_notif } = await import(await resolveModuleUrl('js/data/database/extra.js', assetsVersion));
-				const [notifEnabled, notifTitle, notifDesc, notifTime, notifImage] = await loading_notif();
+				const { middlewareGet } = await import(app_module_url('js/data/middleware.js'));
+				const enabledRow = await middlewareGet('general-data', 'loading_notif_enabled');
+				const notifEnabled = String(enabledRow?.value ?? '').trim().toLowerCase() === 'true';
 				const notif = document.getElementById('loading-screen-notification');
 				const img   = document.getElementById('loading-screen-notification-img');
-				if (notif && notifEnabled === true) {
+				if (notif && notifEnabled) {
+					const dataRow = await middlewareGet('general-data', 'loading_notif_data');
+					const [notifTitle, notifDesc, notifTime, notifImage] = parse_loading_notif_data(dataRow?.value);
 					document.getElementById('loading-screen-notification-title').textContent = notifTitle || '';
 					document.getElementById('loading-screen-notification-description').textContent = notifDesc || '';
 					document.getElementById('loading-screen-notification-time').textContent = notifTime || '';
