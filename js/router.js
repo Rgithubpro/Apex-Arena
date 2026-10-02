@@ -37,6 +37,7 @@
         }
 
         _currentPage = page;
+        window.AppErrors?.breadcrumb('route_changed', { from: outgoingKey, to: page });
         if (modules[page]?.start) modules[page].start();
 
         if (outgoingEl) {

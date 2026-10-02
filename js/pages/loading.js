@@ -138,7 +138,7 @@ Router.register('loading', (() => {
 	// something goes wrong, not a one-off. dismissible: false, since
 	// there's nothing meaningful to dismiss INTO (assets never synced),
 	// so Refresh is the only way forward.
-	function show_failure_notice(reportUrl) {
+	function show_failure_notice(reportUrl, incidentId) {
 		window.Notify?.big(
 			"Couldn't load game assets",
 			`Please try refreshing. If this keeps happening, report it on GitHub${reportUrl ? '.' : ''}`,
@@ -146,6 +146,8 @@ Router.register('loading', (() => {
 				buttonText: 'Refresh',
 				onClose: () => location.reload(),
 				dismissible: true,
+				incidentId,
+				reportUrl: incidentId ? window.AppErrors?.getReportUrl?.(incidentId) : reportUrl,
 			}
 		);
 	}
@@ -154,6 +156,7 @@ Router.register('loading', (() => {
 		async start() {
 			if (_running) return;
 			_running = true;
+			window.AppErrors?.breadcrumb('loading_started');
 
 			const loading_screen = document.getElementById('loading-screen');
 			const title = document.getElementById('loading-screen-title');
@@ -192,6 +195,7 @@ Router.register('loading', (() => {
 				console.log(`GAME | Assets Version = ${assetsVersion}`);
 			} catch (err) {
 				console.error('loading: failed to fetch assets_version', err);
+				await window.AppErrors?.capture({ event: 'assets_version_lookup_failed', error: err, severity: 'warning', context: { step: 'loading_boot' } });
 			}
 			let gameVersion = null;
 			try {
@@ -199,7 +203,9 @@ Router.register('loading', (() => {
 				console.log(`GAME | Game Version = ${gameVersion}`);
 			} catch (err) {
 				console.error('loading: failed to fetch game_version', err);
+				await window.AppErrors?.capture({ event: 'game_version_lookup_failed', error: err, severity: 'warning', context: { step: 'loading_boot' } });
 			}
+			window.AppErrors?.setContext({ gameVersion, assetsVersion, environment: location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'development' : 'production' });
 
 			// Notification settings live in general-data and are read via the
 			// core middleware client, so this works before assets are synced.
@@ -236,6 +242,7 @@ Router.register('loading', (() => {
 				}
 			} catch (err) {
 				console.error('loading: failed to load notification data', err);
+				await window.AppErrors?.capture({ event: 'loading_notification_config_failed', error: err, severity: 'warning', context: { step: 'loading_notification' } });
 			}
 
 			edit_loading_detail('Initializing...');
@@ -247,6 +254,7 @@ Router.register('loading', (() => {
 			// MAX_ATTEMPTS) and logs to Turso on final failure.
 			// Here we just react to the result.
 			let syncResult;
+			window.AppErrors?.breadcrumb('asset_sync_started', { assetsVersion });
 			try {
 				syncResult = await syncAssets({
 					assetsVersion,
@@ -264,15 +272,17 @@ Router.register('loading', (() => {
 				// errors — but guard anyway so a bug in cache.js can't hang
 				// the loading screen forever.
 				console.error('loading: unexpected error from syncAssets', err);
-				syncResult = { status: 'failed', reportUrl: 'https://github.com/Rgithubpro/apex-arena' };
+				const incidentId = await window.AppErrors?.capture({ event: 'asset_sync_unexpected_failure', error: err, context: { assetsVersion } });
+				syncResult = { status: 'failed', reportUrl: 'https://github.com/Rgithubpro/Apex-Arena/issues', incidentId };
 			}
 
 			if (syncResult.status === 'failed') {
 				if (_titleInterval) { clearInterval(_titleInterval); _titleInterval = null; }
 				_running = false;
-				show_failure_notice(syncResult.reportUrl);
+				show_failure_notice(syncResult.reportUrl, syncResult.incidentId);
 				return;
 			}
+			window.AppErrors?.breadcrumb('asset_sync_completed', { assetsVersion });
 
 			if (!_running) return;
 
@@ -285,22 +295,26 @@ Router.register('loading', (() => {
 			// internally (via Notify.big + middleware logging) and keeps
 			// going rather than aborting the whole boot on one bad file.
 			edit_loading_detail('Applying styles...');
+			window.AppErrors?.breadcrumb('asset_styles_applying');
 			set_loading_bar(96);
 			edit_loading_percentage(96);
 			await applyStyles();
 
 			edit_loading_detail('Building pages...');
+			window.AppErrors?.breadcrumb('asset_html_applying');
 			set_loading_bar(98);
 			edit_loading_percentage(98);
 			await applyHTML();
 
 			edit_loading_detail('Starting scripts...');
+			window.AppErrors?.breadcrumb('asset_scripts_applying');
 			set_loading_bar(99);
 			edit_loading_percentage(99);
 			await applyScripts();
 
 			if (!_running) return;
 			set_loading_bar(100);
+			window.AppErrors?.breadcrumb('loading_completed');
 			edit_loading_detail('Launching...');
 			edit_loading_percentage(100);
 			await sleep(500);
@@ -321,6 +335,7 @@ Router.register('loading', (() => {
 				}
 			} catch (err) {
 				console.error('loading: failed to check login state', err);
+				await window.AppErrors?.capture({ event: 'login_state_lookup_failed', error: err, severity: 'warning', context: { assetsVersion, gameVersion } });
 				Router.go('welcome');
 			}
 		},

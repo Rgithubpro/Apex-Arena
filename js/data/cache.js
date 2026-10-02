@@ -86,7 +86,8 @@
 // first — an unresolvable chicken-and-egg. So middleware.js goes back
 // next to cache.js/router.js/notification.js as a core file — put it
 // back at js/middleware.js in the client repo, not in the assets repo.
-import { middlewareGet, middlewareWrite } from './middleware.js';
+import { middlewareGet } from './middleware.js';
+import { capture as captureIncident } from '../errors.js';
 
 // Bump the trailing version suffix whenever a code change affects
 // what's already sitting in existing users'/your own Cache API
@@ -108,8 +109,6 @@ function jsdelivrBase(version) {
 // Table names used by this module (connection details live in
 // js/middleware.js — this file only knows which tables it needs).
 const GENERAL_DATA_TABLE = 'general-data';
-const LOGS_TABLE = 'logs';
-
 const REPORT_URL = 'https://github.com/Rgithubpro/Apex-Arena/issues'; // shown to the player in the failure notice
 
 // Dev mode: auto-detected from hostname. Bypasses the Cache API
@@ -165,49 +164,6 @@ export async function fetchGameVersion() {
 // ─────────────────────────────────────────────────────────────
 // Middleware: logging
 // ─────────────────────────────────────────────────────────────
-
-/**
- * Logs as much diagnostic context as we can reasonably gather,
- * client-side, into the public `logs` table. Never throws — a
- * failure to log should never crash the loading flow further.
- */
-async function logToMiddleware(event, extra = {}) {
-  try {
-    let connection = null;
-    if (navigator.connection) {
-      const c = navigator.connection;
-      connection = {
-        effectiveType: c.effectiveType,
-        downlink: c.downlink,
-        rtt: c.rtt,
-        saveData: c.saveData,
-      };
-    }
-
-    const payload = {
-      event,
-      timestamp: new Date().toISOString(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      language: navigator.language,
-      languages: navigator.languages,
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      screen: { width: screen.width, height: screen.height, dpr: window.devicePixelRatio },
-      viewport: { width: window.innerWidth, height: window.innerHeight },
-      url: location.href,
-      referrer: document.referrer || null,
-      online: navigator.onLine,
-      connection,
-      memory: navigator.deviceMemory || null,
-      cores: navigator.hardwareConcurrency || null,
-      ...extra,
-    };
-
-    await middlewareWrite(LOGS_TABLE, payload);
-  } catch (err) {
-    console.error('cache: failed to write log to middleware (non-fatal)', err);
-  }
-}
 
 // ─────────────────────────────────────────────────────────────
 // Cache API helpers
@@ -651,12 +607,10 @@ export async function syncAssets({ onProgress, assetsVersion } = {}) {
   }
 
   // All attempts failed — log full diagnostics, surface a failure result.
-  await logToMiddleware('asset_sync_failed', {
-    error: {
-      message: lastError?.message,
-      stack: lastError?.stack,
-    },
-    attempts: MAX_ATTEMPTS,
+  const incidentId = await captureIncident({
+    event: 'asset_sync_failed',
+    error: lastError,
+    context: { attempts: MAX_ATTEMPTS, assetsVersion: assetsVersion || null },
   });
 
   report(0, 'Failed to load assets');
@@ -664,6 +618,7 @@ export async function syncAssets({ onProgress, assetsVersion } = {}) {
     status: 'failed',
     error: lastError?.message || 'Unknown error',
     reportUrl: REPORT_URL,
+    incidentId,
   };
 }
 
@@ -925,10 +880,10 @@ async function listKindedAssets() {
  */
 async function reportApplyFailure(kind, path, err) {
   console.error(`cache: failed to apply ${kind} "${path}"`, err);
-  await logToMiddleware('asset_apply_failed', {
-    kind,
-    path,
-    error: { message: err?.message, stack: err?.stack },
+  const incidentId = await captureIncident({
+    event: 'asset_apply_failed',
+    error: err,
+    context: { kind, path },
   });
   if (window.Notify?.big) {
     window.Notify.big(
@@ -938,6 +893,8 @@ async function reportApplyFailure(kind, path, err) {
         buttonText: 'Refresh',
         onClose: () => location.reload(),
         dismissible: true,
+        incidentId,
+        reportUrl: window.AppErrors?.getReportUrl?.(incidentId),
       }
     );
   }
@@ -1092,6 +1049,7 @@ export async function applyScripts() {
  */
 export async function applyAssetAttributes(root = document) {
   const els = root.querySelectorAll('[data-asset]');
+  const failedPaths = [];
   await Promise.all(
     Array.from(els).map(async (el) => {
       try {
@@ -1101,11 +1059,19 @@ export async function applyAssetAttributes(root = document) {
         } else {
           el.style.backgroundImage = `url("${url}")`;
         }
-      } catch (err) {
-        console.error(`cache: failed to apply asset for element`, el, err);
+      } catch {
+        failedPaths.push(el.dataset.asset || 'unknown');
       }
     })
   );
+  if (failedPaths.length) {
+    await captureIncident({
+      event: 'asset_attribute_resolution_failed',
+      error: new Error(`Failed to resolve ${failedPaths.length} data-asset value${failedPaths.length === 1 ? '' : 's'}`),
+      severity: 'warning',
+      context: { failureCount: failedPaths.length, assetPaths: failedPaths.slice(0, 10) },
+    });
+  }
 }
 
 /** Wipes the entire asset cache. Useful for a "force redownload" debug button. */

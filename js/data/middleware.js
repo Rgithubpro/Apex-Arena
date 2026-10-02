@@ -81,10 +81,12 @@ export async function middlewareList(table, filters = {}, limit) {
  * Pass { apiKey: '...' } once client-side auth is turned on for a table;
  * omit it for public writes (e.g. logs, right now).
  */
-export async function middlewareWrite(table, data, { apiKey } = {}) {
+export async function middlewareWrite(table, data, { apiKey, signal, keepalive } = {}) {
   const url = `${MIDDLEWARE_URL}/data/${table}`;
   const res = await fetch(url, {
     method: 'POST',
+    signal,
+    keepalive,
     headers: headers({
       'Content-Type': 'application/json',
       ...(apiKey ? { 'x-api-key': apiKey } : {}),

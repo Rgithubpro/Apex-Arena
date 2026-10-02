@@ -1,4 +1,4 @@
-const CACHE = 'apex-shell-v1';
+const CACHE = 'apex-shell-v2';
 
 // Only what the loading screen needs to boot and show a message offline.
 // Other same-origin code files (js/css/json) get cached automatically after the first online visit.
@@ -9,6 +9,8 @@ const SHELL = [
   'js/router.js',
   'js/pages/loading.js',
   'js/notification.js',
+  'js/errors.js',
+  'js/data/middleware.js',
   'assets/fonts/LilitaOne-Regular.woff2',
   'assets/icons/apex-arena.png',
   'assets/icons/icon-192.png',

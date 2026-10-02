@@ -64,6 +64,7 @@
     <script src="js/router.js"></script>
     <script src="js/pages/loading.js"></script>
     <script src="js/notification.js"></script>
+    <script type="module" src="js/errors.js"></script>
 
 <!-- ================================================================
     NOTIFICATIONS  →  Toast + Modal
@@ -76,6 +77,12 @@
         <div id="notification-modal" class="notification-modal">
             <h3 id="notification-modal-title">Notice</h3>
             <p id="notification-modal-text"></p>
+            <div id="notification-modal-incident" class="notification-modal-incident" hidden>
+                <span>Reference ID</span>
+                <code id="notification-modal-incident-id"></code>
+                <button id="notification-modal-copy" type="button">Copy ID</button>
+                <a id="notification-modal-report" target="_blank" rel="noopener noreferrer">Report on GitHub</a>
+            </div>
             <button id="notification-modal-button">OK</button>
         </div>
     </div>
