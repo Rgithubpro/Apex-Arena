@@ -8,6 +8,52 @@ Router.register('loading', (() => {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
+	// ---- Connectivity gate ---------------------------------------------
+	// Free Render server can cold-start slowly, so only a hard network
+	// failure counts as "unreachable" - no timeout on purpose.
+	// Replace with the base URL from middleware.js if it exports one.
+	const SERVER_PING_URL = 'https://apex-arena-database-server.onrender.com/ping';
+
+	async function can_reach_server() {
+		if (!navigator.onLine) return false;
+		try {
+			// no-cors: resolves on any answer (even 4xx/5xx), rejects only on network failure
+			await fetch(SERVER_PING_URL, { mode: 'no-cors', cache: 'no-store' });
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	async function ensure_online() {
+		let notified = false;
+		while (_running && !(await can_reach_server())) {
+			if (!notified) {
+				notified = true;
+				edit_loading_detail('Waiting for connection...');
+				window.Notify?.big(
+					"You're offline",
+					"You can't play right now because you're offline. Check your internet connection - the game continues automatically once you're back online.",
+					{ dismissible: false }
+				);
+			}
+			// retry when the browser reports online, or every 5s as a fallback
+			await new Promise(resolve => {
+				const done = () => {
+					window.removeEventListener('online', done);
+					clearTimeout(timer);
+					resolve();
+				};
+				const timer = setTimeout(done, 5000);
+				window.addEventListener('online', done);
+			});
+		}
+		if (notified) {
+			window.Notify?.closeBig();
+			await sleep(250); // let the modal's close transition finish before another big() can open
+		}
+	}
+
 	async function edit_loading_percentage(target) {
 		const loading_percentage = document.getElementById('loading-screen-percentage');
 		if (!loading_percentage) return;
@@ -125,6 +171,9 @@ Router.register('loading', (() => {
 					_running = false;
 				}
 			}, 400);
+
+			await ensure_online();
+			if (!_running) return;
 
 			edit_loading_detail('Fetching game version...');
 			set_loading_bar(1);
