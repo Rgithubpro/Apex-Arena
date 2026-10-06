@@ -5,6 +5,13 @@
         'home': 'home-screen'
     };
 
+    const allowedTransitions = {
+        'initial': ['loading'],
+        'loading': ['welcome', 'home'],
+        'welcome': ['home'],
+        'home': []
+    };
+
     const DEFAULT_DURATION = 150; // ms
 
     let _currentPage = null;
@@ -18,6 +25,12 @@
         if (page === _currentPage) return;
 
         const outgoingKey = _currentPage;
+        const allowedPages = allowedTransitions[outgoingKey ?? 'initial'];
+        if (!allowedPages?.includes(page)) {
+            console.warn(`Router: transition from "${outgoingKey}" to "${page}" is not allowed`);
+            return;
+        }
+
         const outgoingEl = outgoingKey ? document.getElementById(pages[outgoingKey]) : null;
         const incomingEl = document.getElementById(pages[page]);
 
