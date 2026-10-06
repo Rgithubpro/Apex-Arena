@@ -2,14 +2,48 @@
     const pages = {
         'loading': 'loading-screen',
         'welcome': 'welcome-screen',
-        'home': 'home-screen'
+        'home': 'home-screen',
+        'profile': 'profile-screen',
+        'trophieroad': 'trophieroad-screen',
+        'settings': 'settings-screen',
+        'shop': 'shop-screen',
+        'battlers': 'battlers-screen',
+        'battler': 'battler-screen',
+        'unlock-battler': 'unlock-battler-screen',
+        'battlepass': 'battlepass-screen',
+        'quests': 'quests-screen',
+        'events': 'events-screen',
+        'matchmaking': 'matchmaking-screen',
+        'match': 'match-screen',
+        'match-results': 'match-results-screen',
+        'news': 'news-screen',
+        'friends': 'friends-screen',
+        'friend-profile': 'friend-profile-screen',
+        'club': 'club-screen'
     };
 
     const allowedTransitions = {
         'initial': ['loading'],
         'loading': ['welcome', 'home'],
         'welcome': ['home'],
-        'home': []
+        'home': ['profile', 'trophieroad', 'settings', 'shop', 'battlers', 'battler', 'unlock-battler', 'battlepass', 'quests', 'events', 'matchmaking', 'news', 'friends', 'friend-profile', 'club'],
+        'profile': ['home'],
+        'trophieroad': ['home'],
+        'settings': ['home'],
+        'shop': ['home'],
+        'battlers': ['home', 'battler', 'unlock-battler'],
+        'battler': ['battlers', 'home'],
+        'unlock-battler': ['battlers', 'home'],
+        'battlepass': ['home', 'quests'],
+        'quests': ['home', 'battlepass'],
+        'events': ['home'],
+        'matchmaking': ['home', 'match'],
+        'match': ['match-results'],
+        'match-results': ['home'],
+        'news': ['home'],
+        'friends': ['home', 'friend-profile'],
+        'friend-profile': ['friends', 'home'],
+        'club': ['home']
     };
 
     const DEFAULT_DURATION = 150; // ms
