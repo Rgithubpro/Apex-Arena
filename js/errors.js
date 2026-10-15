@@ -7,6 +7,7 @@ const MAX_CONSOLE_ENTRIES = 50;
 const MAX_CONSOLE_IN_REPORT = 20;
 const MAX_REPORTS_PER_MINUTE = 10;
 const GITHUB_REPORT_URL = 'https://github.com/Rgithubpro/Apex-Arena/issues/new';
+const IS_DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
 
 const breadcrumbs = [];
 const consoleEntries = [];
@@ -229,10 +230,10 @@ function withinRateLimit() {
   return true;
 }
 
-async function capture({ event = 'client_error', error, severity = 'error', context = {}, notify = false, title } = {}) {
+async function capture({ event = 'client_error', error, severity = 'error', context = {}, notify = false, title, message } = {}) {
   const duplicateId = duplicateIncidentId(error, event);
   if (duplicateId) {
-    if (notify) showIncidentNotice(duplicateId, title);
+    if (notify) showIncidentNotice(duplicateId, title, message);
     return duplicateId;
   }
   const incidentId = createId();
@@ -240,9 +241,14 @@ async function capture({ event = 'client_error', error, severity = 'error', cont
     if (error && (typeof error === 'object' || typeof error === 'function')) seenErrors.set(error, incidentId);
     recentFingerprints.set(fingerprint(error, event), { time: Date.now(), incidentId });
     addBreadcrumb('incident_captured', { event, severity });
+    if (IS_DEV) {
+      addBreadcrumb('incident_suppressed_development', { event });
+      if (notify) showIncidentNotice(incidentId, title, message);
+      return incidentId;
+    }
     if (!withinRateLimit()) {
       addBreadcrumb('incident_suppressed_rate_limit', { event });
-      if (notify) showIncidentNotice(null, title);
+      if (notify) showIncidentNotice(null, title, message);
       return null;
     }
 
@@ -254,7 +260,7 @@ async function capture({ event = 'client_error', error, severity = 'error', cont
         nativeConsole.error?.('AppErrors: incident log write failed (non-fatal)', loggingError);
       })
       .finally(() => clearTimeout(timeout));
-    if (notify) showIncidentNotice(incidentId, title);
+    if (notify) showIncidentNotice(incidentId, title, message);
   } catch (reportingError) {
     nativeConsole.error?.('AppErrors: failed to capture incident (non-fatal)', reportingError);
   }
@@ -265,19 +271,19 @@ function getReportUrl(incidentId) {
   return `${GITHUB_REPORT_URL}?title=${encodeURIComponent(`Bug report — ${incidentId}`)}&body=${encodeURIComponent(`Incident reference: ${incidentId}\n\nWhat happened?`)}`;
 }
 
-function showIncidentNotice(incidentId, title = 'Something went wrong') {
+function showIncidentNotice(incidentId, title = 'Something went wrong', message, reportUrl) {
   try {
     window.Notify?.big(
       title,
-      incidentId
+      message || (incidentId
         ? 'An unexpected problem occurred. You can refresh the game or include this reference ID when reporting it.'
-        : 'An unexpected problem occurred. Please refresh the game and try again.',
+        : 'An unexpected problem occurred. Please refresh the game and try again.'),
       {
         buttonText: 'Refresh',
         onClose: () => location.reload(),
         dismissible: true,
         incidentId,
-        reportUrl: getReportUrl(incidentId),
+        reportUrl: incidentId ? getReportUrl(incidentId) : reportUrl,
       }
     );
   } catch (err) {

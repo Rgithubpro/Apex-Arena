@@ -133,22 +133,14 @@ Router.register('loading', (() => {
 	}
 
 	// Shown when syncAssets() has exhausted its retries. Uses the real
-	// Notify.big() modal (notification.js) rather than the bespoke
-	// #loading-screen-notification block — same failure UI everywhere
-	// something goes wrong, not a one-off. dismissible: false, since
-	// there's nothing meaningful to dismiss INTO (assets never synced),
-	// so Refresh is the only way forward.
+	// shared incident notice so it includes the incident reference and
+	// report link while preserving the asset-sync-specific guidance.
 	function show_failure_notice(reportUrl, incidentId) {
-		window.Notify?.big(
+		window.AppErrors?.showNotice?.(
+			incidentId,
 			"Couldn't load game assets",
 			`Please try refreshing. If this keeps happening, report it on GitHub${reportUrl ? '.' : ''}`,
-			{
-				buttonText: 'Refresh',
-				onClose: () => location.reload(),
-				dismissible: true,
-				incidentId,
-				reportUrl: incidentId ? window.AppErrors?.getReportUrl?.(incidentId) : reportUrl,
-			}
+			reportUrl
 		);
 	}
 
@@ -187,7 +179,7 @@ Router.register('loading', (() => {
 			// from the assets repo. Imported once here and reused for
 			// every call below, rather than re-importing per use.
 			const cache = await import(app_module_url('js/data/cache.js'));
-			const { fetchAssetsVersion, fetchGameVersion, resolveModuleUrl, syncAssets, applyStyles, applyHTML, applyScripts, startStaleSessionGuard } = cache;
+			const { fetchAssetsVersion, fetchGameVersion, resolveModuleUrl, syncAssets, applyStyles, applyHTML, applyScripts, startStaleSessionGuard, AssetApplyError } = cache;
 
 			let assetsVersion = null;
 			try {
@@ -288,29 +280,43 @@ Router.register('loading', (() => {
 
 			// --- Build pages: CSS -> HTML -> scripts, in that order. ---
 			// Order matters: page scripts do document.getElementById(...)
-			// at top-level registration time (not lazily inside start()),
-			// so HTML must exist before scripts run; CSS goes first to
-			// avoid a flash of unstyled content on the freshly-injected
-			// markup. Each function handles its own per-item failures
-			// internally (via Notify.big + middleware logging) and keeps
-			// going rather than aborting the whole boot on one bad file.
-			edit_loading_detail('Applying styles...');
-			window.AppErrors?.breadcrumb('asset_styles_applying');
-			set_loading_bar(96);
-			edit_loading_percentage(96);
-			await applyStyles();
+			// at top-level registration time, so HTML must exist before
+			// scripts run. Any required asset failure stops startup rather
+			// than launching a partially loaded game.
+			try {
+				edit_loading_detail('Applying styles...');
+				window.AppErrors?.breadcrumb('asset_styles_applying');
+				set_loading_bar(96);
+				edit_loading_percentage(96);
+				await applyStyles();
 
-			edit_loading_detail('Building pages...');
-			window.AppErrors?.breadcrumb('asset_html_applying');
-			set_loading_bar(98);
-			edit_loading_percentage(98);
-			await applyHTML();
+				edit_loading_detail('Building pages...');
+				window.AppErrors?.breadcrumb('asset_html_applying');
+				set_loading_bar(98);
+				edit_loading_percentage(98);
+				await applyHTML();
 
-			edit_loading_detail('Starting scripts...');
-			window.AppErrors?.breadcrumb('asset_scripts_applying');
-			set_loading_bar(99);
-			edit_loading_percentage(99);
-			await applyScripts();
+				edit_loading_detail('Starting scripts...');
+				window.AppErrors?.breadcrumb('asset_scripts_applying');
+				set_loading_bar(99);
+				edit_loading_percentage(99);
+				await applyScripts();
+			} catch (err) {
+				if (_titleInterval) { clearInterval(_titleInterval); _titleInterval = null; }
+				_running = false;
+				if (!(err instanceof AssetApplyError)) {
+					console.error('loading: failed to apply game assets', err);
+					await window.AppErrors?.capture({
+						event: 'asset_application_failed',
+						error: err,
+						context: { assetsVersion },
+						notify: true,
+						title: 'Something went wrong loading the game',
+						message: 'An unexpected error occurred while loading game assets. Please refresh and try again.',
+					});
+				}
+				return;
+			}
 
 			if (!_running) return;
 			set_loading_bar(100);

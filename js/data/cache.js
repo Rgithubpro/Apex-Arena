@@ -869,14 +869,19 @@ async function listKindedAssets() {
     .map(([path, entry]) => ({ path, kind: entry.kind, pageKey: entry.pageKey }));
 }
 
+export class AssetApplyError extends Error {
+  constructor(kind, path, cause) {
+    super(`Failed to apply ${kind} "${path}"`, { cause });
+    this.name = 'AssetApplyError';
+    this.kind = kind;
+    this.path = path;
+  }
+}
+
 /**
  * Reports one failed item during applyStyles/applyHTML/applyScripts.
- * Never throws itself — logs to the middleware (same as the sync
- * failure path) and shows the blocking failure modal with a Refresh
- * button, mirroring exactly what a full sync failure shows, so
- * there's one consistent "something's wrong, here's how to recover"
- * UI rather than a second bespoke one. Continues past the failure —
- * one bad page shouldn't hang the whole boot sequence.
+ * Logs to the middleware, shows the shared incident notice, then
+ * rejects the loading sequence so it cannot launch a partially loaded game.
  */
 async function reportApplyFailure(kind, path, err) {
   console.error(`cache: failed to apply ${kind} "${path}"`, err);
@@ -885,19 +890,12 @@ async function reportApplyFailure(kind, path, err) {
     error: err,
     context: { kind, path },
   });
-  if (window.Notify?.big) {
-    window.Notify.big(
-      'Something went wrong loading the game',
-      `A part of the game ("${path}") failed to load. Try refreshing — if this keeps happening, please report it on GitHub.`,
-      {
-        buttonText: 'Refresh',
-        onClose: () => location.reload(),
-        dismissible: true,
-        incidentId,
-        reportUrl: window.AppErrors?.getReportUrl?.(incidentId),
-      }
-    );
-  }
+  window.AppErrors?.showNotice?.(
+    incidentId,
+    'Something went wrong loading the game',
+    `A part of the game ("${path}") failed to load. Try refreshing — if this keeps happening, please report it on GitHub.`
+  );
+  throw new AssetApplyError(kind, path, err);
 }
 
 // ─────────────────────────────────────────────────────────────
