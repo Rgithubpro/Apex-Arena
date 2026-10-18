@@ -333,12 +333,11 @@ Router.register('loading', (() => {
 			startStaleSessionGuard();
 
 			try {
-				const { get_logged_in } = await import(await resolveModuleUrl('js/data/localstorage.js', assetsVersion));
-				if (await get_logged_in() === true) {
-					Router.go('home');
-				} else {
-					Router.go('welcome');
-				}
+				// Restores a saved session, or finishes a Google/Microsoft/Discord login we just came back from.
+				const { Auth } = await import(await resolveModuleUrl('js/data/auth.js', assetsVersion));
+				const authState = await Auth.init();
+				window.__authInit = authState; // welcome.js picks up from here (terms step, error toast)
+				Router.go(authState.route === 'home' ? 'home' : 'welcome');
 			} catch (err) {
 				console.error('loading: failed to check login state', err);
 				await window.AppErrors?.capture({ event: 'login_state_lookup_failed', error: err, severity: 'warning', context: { assetsVersion, gameVersion } });
