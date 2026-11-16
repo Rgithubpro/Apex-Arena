@@ -111,21 +111,30 @@ function jsdelivrBase(version) {
 const GENERAL_DATA_TABLE = 'general-data';
 const REPORT_URL = 'https://github.com/Rgithubpro/Apex-Arena/issues'; // shown to the player in the failure notice
 
-// Dev mode: auto-detected from hostname. Bypasses the Cache API
-// entirely and fetches straight from the sibling assets folder.
-export const IS_DEV = ['localhost', '127.0.0.1'].includes(location.hostname);
+function isPrivateIPv4(hostname) {
+  const octets = hostname.split('.');
+  if (octets.length !== 4 || !octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255)) {
+    return false;
+  }
 
-// IMPORTANT: this can't be a relative path like '../apex-arena-assets/'.
-// Live Server serves apex-arena-client/'s CONTENTS as the web root
-// (http://127.0.0.1:5500/), so as far as the browser is concerned
-// there is no folder above that to walk up into — a relative '../'
-// just gets clamped back to the same root instead of reaching the
-// real sibling folder on disk. The fix: run a second static server
-// rooted at apex-arena-assets/ (e.g. a second VS Code Live Server
-// instance, right-click apex-arena-assets/index... or any file in it
-// -> "Open with Live Server", it'll pick its own port), and point
-// this at that server's actual origin.
-const DEV_ASSETS_BASE = 'http://127.0.0.1:5501/'; // <-- confirm this matches whatever port your second server actually uses
+  const [first, second] = octets.map(Number);
+  return first === 10 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168);
+}
+
+// Dev mode works on loopback and private LAN addresses, so a phone
+// opening the laptop's IPv4 address still bypasses the Cache API.
+export const IS_DEV =
+  location.hostname === 'localhost' ||
+  location.hostname.startsWith('127.') ||
+  isPrivateIPv4(location.hostname);
+
+// The assets server runs on port 5501 on the same machine as the client.
+// Derive its host and protocol from the current URL for LAN testing.
+const devAssetsUrl = new URL(location.origin);
+devAssetsUrl.port = '5501';
+const DEV_ASSETS_BASE = `${devAssetsUrl.origin}/`;
 
 // fflate for zip extraction, loaded lazily only if a zip is actually needed.
 const FFLATE_CDN = 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js';
@@ -581,10 +590,8 @@ export async function syncAssets({ onProgress, assetsVersion } = {}) {
     // from the local assets folder on demand, per path, exactly when
     // a page actually asks for it — so there's no upfront "download
     // everything" step needed, and no manifest/hash diffing to go
-    // stale while you're mid-edit. It still writes into the Cache API
-    // via the same putAsset() prod uses (see getAsset), so that part
-    // of the pipeline gets exercised in dev too — it's just always
-    // treated as "changed" since we skip diffing entirely.
+    // stale while you're mid-edit. Dev loading does not require the
+    // Cache API, which may be unavailable on insecure LAN origins.
     markSynced();
     report(100, 'Dev mode — assets load directly from local folder');
     return { status: 'ok', skipped: true, reason: 'dev-mode' };
@@ -676,11 +683,9 @@ async function fetchAndUnzipDev(zipPath) {
  * looking for a "<folder>.zip" containing it (mirrors how bundles
  * work in prod, since a local dev folder can just as easily have a
  * zipped bundle sitting in it, e.g. profile-pictures.zip). Either
- * way, the result is stored via the same putAsset() prod uses before
- * returning an object URL — so every call re-fetches and overwrites
- * (always fresh, no staleness possible since there's no manifest/hash
- * diff to go stale), while still exercising the real Cache API
- * storage code path.
+ * way, the result is returned as an object URL. Dev assets are not
+ * stored in the Cache API, which may be unavailable on insecure LAN
+ * origins such as HTTP on a phone.
  */
 // Prod only: assetPath -> Promise<blob URL>. Storing the *promise*
 // (not the finished URL) means many elements asking for the same asset
@@ -712,14 +717,11 @@ export function getAsset(assetPath) {
 }
 
 async function loadAssetUrl(assetPath) {
-  const cache = await openAssetCache();
-
   if (IS_DEV) {
     // 1. Try the path directly.
     const direct = await fetch(DEV_ASSETS_BASE + assetPath);
     if (direct.ok) {
       const blob = await direct.blob();
-      await putAsset(cache, assetPath, blob, guessContentType(assetPath));
       return URL.createObjectURL(blob);
     }
 
@@ -733,7 +735,6 @@ async function loadAssetUrl(assetPath) {
       if (unzipped[innerPath]) {
         const bytes = unzipped[innerPath];
         const blob = new Blob([bytes], { type: guessContentType(assetPath) });
-        await putAsset(cache, assetPath, blob, guessContentType(assetPath));
         return URL.createObjectURL(blob);
       }
     }
@@ -741,6 +742,7 @@ async function loadAssetUrl(assetPath) {
     throw new Error(`Dev asset "${assetPath}" not found directly or inside any candidate .zip under ${DEV_ASSETS_BASE}`);
   }
 
+  const cache = await openAssetCache();
   const res = await cache.match(assetCacheUrl(assetPath));
   if (!res) {
     throw new Error(`Asset "${assetPath}" not found in cache — was syncAssets() run and did it succeed?`);
@@ -764,13 +766,10 @@ async function loadAssetUrl(assetPath) {
  * blob.text() instead of URL.createObjectURL(blob) at the end.
  */
 export async function getAssetText(assetPath) {
-  const cache = await openAssetCache();
-
   if (IS_DEV) {
     const direct = await fetch(DEV_ASSETS_BASE + assetPath);
     if (direct.ok) {
       const blob = await direct.blob();
-      await putAsset(cache, assetPath, blob, guessContentType(assetPath));
       return blob.text();
     }
 
@@ -783,7 +782,6 @@ export async function getAssetText(assetPath) {
       if (unzipped[innerPath]) {
         const bytes = unzipped[innerPath];
         const blob = new Blob([bytes], { type: guessContentType(assetPath) });
-        await putAsset(cache, assetPath, blob, guessContentType(assetPath));
         return blob.text();
       }
     }
@@ -791,6 +789,7 @@ export async function getAssetText(assetPath) {
     throw new Error(`Dev asset "${assetPath}" not found directly or inside any candidate .zip under ${DEV_ASSETS_BASE}`);
   }
 
+  const cache = await openAssetCache();
   const res = await cache.match(assetCacheUrl(assetPath));
   if (!res) {
     throw new Error(`Asset "${assetPath}" not found in cache — was syncAssets() run and did it succeed?`);
@@ -1075,7 +1074,7 @@ export async function applyAssetAttributes(root = document) {
 /** Wipes the entire asset cache. Useful for a "force redownload" debug button. */
 export async function clearAssetCache() {
   clearAssetUrlMemo();
-  await caches.delete(CACHE_NAME);
+  if (typeof caches !== 'undefined') await caches.delete(CACHE_NAME);
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -2,8 +2,9 @@
   "name": "Apex-Arena",
   "short_name": "Apex-Arena",
   "description": "Apex-Arena is an action-packed arena game.",
-  "start_url": "/",
-  "id": "/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./",
   "lang": "en",
   "display": "standalone",
   "display_override": [
@@ -17,7 +18,7 @@
     {
       "name": "Play Apex-Arena",
       "short_name": "Play",
-      "url": "/",
+      "url": "./",
       "icons": [
         {
           "src": "assets/icons/icon-192.png",
@@ -30,7 +31,7 @@
   "protocol_handlers": [
     {
       "protocol": "web+apexarena",
-      "url": "/?protocol=%s"
+      "url": "./?protocol=%s"
     }
   ],
   "icons": [

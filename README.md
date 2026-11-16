@@ -58,6 +58,8 @@ You will need a local web server to run the game properly (due to standard CORS 
 3. **Launch the local server:**
    Open the folder in your code editor and start your live server. The game should now be running at `http://localhost:5500` (or your configured port).
 
+   To test on a phone connected to the same Wi-Fi, make both the client and the sibling `apex-arena-assets` folder available on your network. Open `http://<laptop-ip>:5500` on the phone; the client automatically detects a private LAN IP and fetches dev assets from the same IP on port `5501`. Make sure your firewall allows both ports. The hosted database server must also allow the exact client origin (for example, add `http://192.168.2.41:5500` to its `ALLOWED_ORIGINS` setting and redeploy); update it if the laptop's LAN IP changes.
+
 ## 🗺️ Roadmap
 
 - [x] Initial project setup and SPA routing
