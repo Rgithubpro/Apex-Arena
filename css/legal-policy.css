@@ -1,0 +1,57 @@
+:root {
+    color-scheme: dark;
+    font-family: Arial, sans-serif;
+    background: #0d111f;
+    color: #fff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(120% 120% at 50% 0%, #0f3550 0%, #082033 45%, #050d18 100%);
+}
+
+#policy-page {
+    width: min(100% - 2rem, 900px);
+    min-height: calc(100vh - 2rem);
+    margin: 1rem auto;
+    padding: clamp(1.25rem, 4vw, 3rem);
+    border: 1px solid rgba(10, 204, 238, 0.4);
+    border-radius: 20px;
+    background: linear-gradient(180deg, #0d2740 0%, #08182a 100%);
+    box-shadow: 0 14px 48px rgba(0, 0, 0, 0.45);
+}
+
+.policy-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+a {
+    color: #01d9f5;
+}
+
+h1 {
+    margin: 2rem 0 1.5rem;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+#policy-status,
+.policy-content {
+    color: #d8efff;
+    line-height: 1.7;
+}
+
+.policy-content {
+    overflow-wrap: anywhere;
+}
+
+.policy-content :first-child {
+    margin-top: 0;
+}
