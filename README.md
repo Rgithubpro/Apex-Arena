@@ -2,80 +2,109 @@
 
 ![Apex Arena Banner](assets/icons/apex-arena.png)
 
-*A fast-paced, browser-based multiplayer combat game.*
+*A browser-based arena brawler in development.*
 
-[![Status: In Development](https://img.shields.io/badge/Status-In%20Development-yellow.svg)](#)
-[![Tech: HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](#)
-[![Tech: CSS](https://img.shields.io/badge/CSS-663399?logo=css&logoColor=white)](#)
-[![Tech: JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=323330)](#)
+[![Status: In Development](https://img.shields.io/badge/Status-In%20Development-yellow.svg)](#roadmap)
+[![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](#technology)
+[![CSS](https://img.shields.io/badge/CSS-663399?logo=css&logoColor=white)](#technology)
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=323330)](#technology)
 
-## 📖 About the Project
+Apex Arena is an early-stage browser game project. The repository currently contains the web app shell, loading experience, client-side routing foundation, and supporting site/PWA files. Core playable combat and online multiplayer are still planned—not finished features.
 
-**Apex Arena** is an action-packed multiplayer brawler designed to run natively in the browser. Inspired by top-tier mobile combat games, it brings intense, real-time arena battles to the web without the need for downloads. Built as a Single Page Application (SPA) with Progressive Web App (PWA) capabilities, it offers a seamless, app-like experience across devices.
+- **Play / project site:** [rgithubpro.github.io/Apex-Arena](https://rgithubpro.github.io/Apex-Arena/)
+- **Main game repository:** [Rgithubpro/Apex-Arena](https://github.com/Rgithubpro/Apex-Arena)
+- **Companion assets repository:** [Rgithubpro/Apex-Arena-Assets](https://github.com/Rgithubpro/Apex-Arena-Assets)
 
-## ✨ Key Features
+## Project status
 
-*   **Real-Time Multiplayer Combat:** Fast, responsive mechanics and netcode designed for competitive arena matches.
-*   **Browser-Native & PWA:** Fully playable in modern browsers with Service Worker support for fast loading and offline asset caching.
-*   **Custom UI/UX:** A sleek, intuitive user interface entirely custom-designed in Figma.
-*   **Smooth Performance:** Lightweight frontend architecture utilizing clean JavaScript and SASS for high framerates.
+This project is actively being developed. The public site and client foundation are available, but the game is not yet a complete playable multiplayer experience. Screenshots will be added when gameplay and visuals are ready to share.
 
-## 🛠️ Tech Stack
+## Technology
 
-### Frontend
-*   **HTML5 & CSS3:** Utilizing advanced CSS nesting and SASS for a modular, maintainable stylesheet.
-*   **JavaScript (Vanilla/ES6+):** Handling game logic, SPA routing, and dynamic DOM manipulation.
+- **HTML5 and CSS3** for the browser interface
+- **Vanilla JavaScript (ES modules)** for client-side behavior and routing
+- **Service worker and web app manifest** for installability and limited offline support
+- **Backend middleware integration** is present in the client; game services and online gameplay are still under development
 
-### Design & Assets
-*   **Figma:** Interface design, menu layouts, and HUD planning.
+The companion [Apex-Arena-Assets repository](https://github.com/Rgithubpro/Apex-Arena-Assets) contains additional game assets and content tooling. See its README for its layout and manifest update workflow.
 
-### Networking
-*   *This works with Supabase as database and a seperate server for matchmaking etc.*
+## Screenshots
 
-## 📸 Screenshots
+Gameplay screenshots and battler previews are not ready yet. They will be added here when they are available.
 
-| Main Menu | Combat Gameplay |
-| :---: | :---: |
-| Picture will come later | Picture will come later |
-
-## 🚀 Getting Started
-
-To run Apex Arena locally for development or testing:
+## Run locally
 
 ### Prerequisites
-You will need a local web server to run the game properly (due to standard CORS policies for ES modules and fetch requests). You can use:
-*   Live Server extension for VS Code
-*   Node.js `http-server`
 
-### Installation
+- Git
+- A local static web server (for example, the VS Code Live Server extension or Node.js `http-server`)
 
-1. **Clone the repository:**
-   git clone https://github.com/rgithubpro/Apex-Arena.git
+A local server is needed for browser module loading and fetch requests; opening `index.html` directly as a `file://` URL may not work correctly.
 
-2. **Navigate to the directory:**
-   cd apex-arena
+### Steps
 
-3. **Launch the local server:**
-   Open the folder in your code editor and start your live server. The game should now be running at `http://localhost:5500` (or your configured port).
+```bash
+git clone https://github.com/Rgithubpro/Apex-Arena.git
+cd Apex-Arena
+```
 
-   To test on a phone connected to the same Wi-Fi, make both the client and the sibling `apex-arena-assets` folder available on your network. Open `http://<laptop-ip>:5500` on the phone; the client automatically detects a private LAN IP and fetches dev assets from the same IP on port `5501`. Make sure your firewall allows both ports. The hosted database server must also allow the exact client origin (for example, add `http://192.168.2.41:5500` to its `ALLOWED_ORIGINS` setting and redeploy); update it if the laptop's LAN IP changes.
+Start a static server from the repository root, then open the local URL it provides (Live Server commonly uses `http://localhost:5500`). Some features that depend on remote services require an internet connection and may not be implemented yet.
 
-## 🗺️ Roadmap
+## Roadmap
 
-- [x] Initial project setup and SPA routing
-- [x] Core UI design (Figma integration)
-- [ ] Implement player movement and basic combat mechanics
-- [ ] Connect and optimize real-time multiplayer networking
-- [ ] Register Service Workers for full PWA compliance
-- [ ] Add matchmaking and leaderboards
+The roadmap is a broad plan, not a release schedule. Priorities may change as development progresses. Items below are planned unless explicitly marked complete.
 
-## 🤝 Contributing
+### 1. Client foundation
 
-This project is currently in active solo development, but feedback and bug reports are always welcome! Feel free to open an **Issue** if you spot a bug or have a feature request.
+- [x] Set up the browser project and initial loading experience
+- [x] Add a client-side routing foundation
+- [x] Add web app manifest and service-worker scaffolding
+- [ ] Complete and test navigation for the planned screens
+- [ ] Establish shared UI patterns, responsive layouts, and loading/error states
 
-## 📄 License
+### 2. Accounts and game data
 
-Read **LICENCE** for the licence
+- [ ] Decide and document the account, authentication, and session flow
+- [ ] Connect client account/profile screens to reliable backend services
+- [ ] Define and validate the data model for player profiles and game state
+- [ ] Add safe persistence, input validation, and useful failure/retry behavior
+
+### 3. Core game experience
+
+- [ ] Build a playable prototype with player movement and basic combat
+- [ ] Add battler abilities, health/damage rules, and match win conditions
+- [ ] Create an initial arena and connect the game interface to live match state
+- [ ] Test controls and gameplay across desktop and mobile browsers
+
+### 4. Online multiplayer
+
+- [ ] Design the authoritative multiplayer server and match lifecycle
+- [ ] Implement matchmaking and joining/leaving matches
+- [ ] Handle latency, disconnects, reconnects, and invalid or stale match state
+- [ ] Run private playtests and tune stability and responsiveness
+
+### 5. Progression and community
+
+- [ ] Build out battler roster and player profile progression
+- [ ] Add quests, events, rewards, and other progression systems
+- [ ] Develop friends, clubs, and other social features
+- [ ] Add matchmaking results and player-facing match history where appropriate
+
+### 6. Release readiness
+
+- [ ] Add automated checks for critical client and service flows
+- [ ] Review accessibility, performance, privacy, and security
+- [ ] Document supported browsers, known limitations, and deployment process
+- [ ] Prepare public gameplay previews and a first release checklist
+
+## Feedback and contributions
+
+The project is currently in solo development. Feedback and bug reports are welcome—please open an [issue](https://github.com/Rgithubpro/Apex-Arena/issues) with clear steps and relevant details. Check with the maintainer before starting substantial changes.
+
+## License
+
+See [LICENCE](LICENCE). All rights are reserved; permission is required to reproduce or modify this project.
 
 ---
-**Designed & Developed by Ralph**
+
+Designed and developed by Ralph.
