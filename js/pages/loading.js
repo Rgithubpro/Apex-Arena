@@ -337,6 +337,58 @@ Router.register('loading', (() => {
 				const { Auth } = await import(await resolveModuleUrl('js/data/auth.js', assetsVersion));
 				const authState = await Auth.init();
 				window.__authInit = authState; // welcome.js picks up from here (terms step, error toast)
+
+				if (authState.route === 'banned') {
+					// Same popup the loading screen uses for notices; the game does not continue.
+					const notif = document.getElementById('loading-screen-notification');
+					const notifImg = document.getElementById('loading-screen-notification-img');
+					if (notif) {
+						document.getElementById('loading-screen-notification-title').textContent = 'Account banned';
+						document.getElementById('loading-screen-notification-description').textContent = authState.reason
+							? `This account has been banned. Reason: ${authState.reason}`
+							: 'This account has been banned.';
+						document.getElementById('loading-screen-notification-time').textContent = '';
+						if (notifImg) {
+							notifImg.removeAttribute('src');
+							notifImg.style.display = 'none';
+						}
+						notif.hidden = false;
+						document.body.classList.add('has-notification');
+						if (_titleInterval) {
+							clearInterval(_titleInterval);
+							_titleInterval = null;
+						}
+						_running = false;
+						return;
+					}
+				}
+
+				if (authState.error && authState.error !== 'access_denied') {
+					// The saved login could not be used: say why in the same popup, then carry on to the login screen.
+					const notif = document.getElementById('loading-screen-notification');
+					const notifImg = document.getElementById('loading-screen-notification-img');
+					if (notif) {
+						const problem = Auth.describeProblem(authState);
+						document.getElementById('loading-screen-notification-title').textContent = problem.title;
+						document.getElementById('loading-screen-notification-description').textContent = problem.text;
+						document.getElementById('loading-screen-notification-time').textContent = 'Tap to continue';
+						if (notifImg) {
+							notifImg.removeAttribute('src');
+							notifImg.style.display = 'none';
+						}
+						notif.hidden = false;
+						document.body.classList.add('has-notification');
+						await new Promise((resolve) => {
+							const done = () => { clearTimeout(timer); notif.removeEventListener('click', done); resolve(); };
+							const timer = setTimeout(done, 10000);
+							notif.addEventListener('click', done);
+						});
+						notif.hidden = true;
+						document.body.classList.remove('has-notification');
+					}
+					authState.error = null; // already shown: welcome.js must not show it again
+				}
+
 				Router.go(authState.route === 'home' ? 'home' : 'welcome');
 			} catch (err) {
 				console.error('loading: failed to check login state', err);
